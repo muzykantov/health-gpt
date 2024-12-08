@@ -99,4 +99,8 @@ go test ./...
 
 По вопросам и поддержке обращайтесь:
 - Email: gennadii@muzykantov.me
-- Telegram: [@HealthNeuroConsultantBot](https://t.me/HealthNeuroConsultantBot)
+- Telegram: https://t.me/muzykantov
+
+## 🤖 Ссылка на бота
+
+[HealthNeuroConsultant](https://t.me/HealthNeuroConsultantBot)
