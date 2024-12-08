@@ -103,4 +103,4 @@ go test ./...
 
 ## 🤖 Ссылка на бота
 
-[HealthNeuroConsultant](https://t.me/HealthNeuroConsultantBot)
+- [HealthNeuroConsultant](https://t.me/HealthNeuroConsultantBot)
