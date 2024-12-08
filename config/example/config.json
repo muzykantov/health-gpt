@@ -1,0 +1,36 @@
+{
+    "llm": {
+      "activeProvider": "gigachat",
+      "gigaChat": {
+        "clientId": "your-gigachat-client-id",
+        "clientSecret": "your-gigachat-client-secret",
+        "model": "GigaChat-Max",
+        "temperature": 0.1,
+        "topP": 1.0,
+        "maxTokens": 2048,
+        "repetitionPenalty": 1.0
+      },
+      "chatGPT": {
+        "apiKey": "your-openai-api-key",
+        "model": "gpt-4",
+        "temperature": 0.1,
+        "topP": 1.0,
+        "maxTokens": 2048,
+        "socksProxy": ""
+      }
+    },
+    "telegram": {
+      "token": "your-telegram-bot-token",
+      "debug": true
+    },
+    "storage": {
+      "history": {
+        "type": "file",
+        "path": "./data/history"
+      },
+      "users": {
+        "type": "file",
+        "path": "./data/users"
+      }
+    }
+  }
