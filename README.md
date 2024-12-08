@@ -90,6 +90,7 @@ go test ./...
 
 ## 👨‍💻 Команда
 
+- [Валерий Полуновский](https://t.me/vvp310792) - Научный руководитель
 - [Ольга Шварева](https://t.me/OlgaShvareva) - Инженер по обработке естественного языка (NLP Engineer)
 - [Дмитрий Громазин](https://t.me/Ekzorcist777) - Менеджер продукта
 - [Елена Губская](https://t.me/helenatroya729) - Инженер по машинному обучению (ML Engineer)
@@ -99,4 +100,8 @@ go test ./...
 
 По вопросам и поддержке обращайтесь:
 - Email: gennadii@muzykantov.me
-- Telegram: [@HealthNeuroConsultantBot](https://t.me/HealthNeuroConsultantBot)
+- Telegram: https://t.me/muzykantov
+
+## 🤖 Ссылка на бота
+
+- [HealthNeuroConsultant](https://t.me/HealthNeuroConsultantBot)
