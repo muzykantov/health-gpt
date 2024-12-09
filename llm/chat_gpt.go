@@ -144,11 +144,11 @@ func (c *ChatGPT) CompleteChat(ctx context.Context, msgs []chat.Message) (chat.M
 
 	// Формирование запроса к ChatGPT API.
 	req := openai.ChatCompletionRequest{
-		Model:       c.model,
-		Messages:    openAIMessages,
-		Temperature: c.temperature,
-		TopP:        c.topP,
-		MaxTokens:   c.maxTokens,
+		Model:               c.model,
+		Messages:            openAIMessages,
+		Temperature:         c.temperature,
+		TopP:                c.topP,
+		MaxCompletionTokens: c.maxTokens,
 	}
 
 	// Выполнение запроса к API.
