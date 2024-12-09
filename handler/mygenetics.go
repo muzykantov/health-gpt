@@ -72,7 +72,10 @@ func MyGenetics() server.Handler {
 				myGeneticsCodelab(content.Data).Serve(ctx, w, r)
 
 			default:
-				w.WriteResponse(chat.NewMessage(chat.RoleAssistant, "⛔ Неизвестная команда."))
+				w.WriteResponse(chat.NewMessage(chat.RoleAssistant,
+					"⛔ Неизвестная команда. "+
+						"Пожалуйста, выберите действие из предложенного списка."),
+				)
 			}
 		},
 	)
@@ -88,21 +91,24 @@ func myGeneticsCodelabs() server.Handler {
 				w.WriteResponse(
 					chat.NewMessage(
 						chat.RoleAssistant,
-						fmt.Sprint("⛔ Ошибка получения списка анализов: ", err),
+						"⚠️ Не удалось загрузить список анализов. "+
+							"Пожалуйста, попробуйте позже или обратитесь в поддержку.",
 					),
 				)
 			}
 
 			if len(codelabs) == 0 {
 				w.WriteResponse(
-					chat.NewMessage(chat.RoleAssistant, "⚠️ Список анализов пуст. Попробуйте позже."),
+					chat.NewMessage(chat.RoleAssistant,
+						"⚠️ У вас пока нет доступных анализов. "+
+							"Новые результаты появятся здесь автоматически."),
 				)
 
 				return
 			}
 
 			content := chat.SelectContent{
-				Header: "🧪 Выберите анализ для отправки результатов в чат:",
+				Header: "🧪 Выберите анализ, чтобы просмотреть детальные результаты:",
 			}
 			for _, codelab := range codelabs {
 				content.Items = append(content.Items, chat.SelectContentItem{
@@ -116,7 +122,8 @@ func myGeneticsCodelabs() server.Handler {
 			)
 
 			content = chat.SelectContent{
-				Header: "🧪  Выберите анализ для заключения ИИ:",
+				Header: "🧪 Выберите анализ для получения " +
+					"развёрнутой интерпретации результатов с помощью ИИ:",
 			}
 			for _, codelab := range codelabs {
 				content.Items = append(content.Items, chat.SelectContentItem{
@@ -146,7 +153,8 @@ func myGeneticsCodelab(code string) server.Handler {
 			w.WriteResponse(
 				chat.NewMessage(
 					chat.RoleAssistant,
-					fmt.Sprintf("🧪 Запрашиваю результаты анализа %s...", code),
+					fmt.Sprintf("📡 Загружаю результаты анализа %s. "+
+						"Это займёт несколько секунд...", code),
 				),
 			)
 
@@ -159,7 +167,8 @@ func myGeneticsCodelab(code string) server.Handler {
 				w.WriteResponse(
 					chat.NewMessage(
 						chat.RoleAssistant,
-						fmt.Sprint("⛔ Ошибка получения информации об анализе: ", err),
+						"⚠️ Не удалось получить информацию об анализе. "+
+							"Пожалуйста, попробуйте позже или обратитесь в поддержку.",
 					),
 				)
 
@@ -180,7 +189,9 @@ func myGeneticsCodelab(code string) server.Handler {
 								feature.String()+
 									"\n"+
 									fmt.Sprintf(
-										"📑 Признак %d из %d.", i+1, len(features),
+										"📑 Показываю результат %d из %d.",
+										i+1,
+										len(features),
 									),
 							),
 						)
@@ -207,14 +218,16 @@ func myGeneticsCodelab(code string) server.Handler {
 			w.WriteResponse(
 				chat.NewMessage(
 					chat.RoleAssistant,
-					fmt.Sprintf("📑 Получено признаков для анализа: %d", len(features)),
+					fmt.Sprintf("📑 Загружено %d параметров анализа. "+
+						"Приступаю к обработке...", len(features)),
 				),
 			)
 
 			w.WriteResponse(
 				chat.NewMessage(
 					chat.RoleAssistant,
-					fmt.Sprintf("⌛ Запрашиваю ИИ интерпретацию результатов анализа %s...", code),
+					"⌛ Анализирую результаты с помощью ИИ. "+
+						"Это может занять до минуты...",
 				),
 			)
 
@@ -223,7 +236,9 @@ func myGeneticsCodelab(code string) server.Handler {
 				w.WriteResponse(
 					chat.NewMessage(
 						chat.RoleAssistant,
-						fmt.Sprint("⚠️ Ошибка получения ответа ИИ: ", err),
+						"⚠️ Не удалось получить интерпретацию результатов. "+
+							"Пожалуйста, попробуйте позже или "+
+							"просмотрите результаты без анализа ИИ.",
 					),
 				)
 
