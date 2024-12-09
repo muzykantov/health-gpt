@@ -10,3 +10,5 @@ services:
       - ./data:/app/data
     environment:
       - TZ=Europe/Moscow
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
