@@ -85,7 +85,7 @@ func main() {
 	}
 
 	// Инициализируем хранилище пользователей.
-	var userStorage server.UserManager
+	var userStorage server.UserStorage
 	switch cfg.Storage.Users.Type {
 	case "file":
 		userStorage, err = user.NewFileStorage(cfg.Storage.Users.Path)

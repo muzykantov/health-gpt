@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/muzykantov/health-gpt/chat"
+	"github.com/muzykantov/health-gpt/chat/content"
 	"github.com/muzykantov/health-gpt/mygenetics"
 	"github.com/muzykantov/health-gpt/server"
 )
@@ -64,12 +65,20 @@ const MyGeneticsCodelabsPrompt = `
 func MyGenetics() server.Handler {
 	return server.HandlerFunc(
 		func(ctx context.Context, w server.ResponseWriter, r *server.Request) {
-			switch content := r.Incoming.Content.(type) {
+			switch msgContent := r.Incoming.Content.(type) {
 			case string:
 				myGeneticsCodelabs().Serve(ctx, w, r)
 
-			case chat.SelectContentItem:
-				myGeneticsCodelab(content.Data).Serve(ctx, w, r)
+			case content.SelectItem:
+				myGeneticsCodelab(msgContent.Data).Serve(ctx, w, r)
+
+			case content.Command:
+				w.WriteResponse(
+					chat.NewMessage(
+						chat.RoleAssistant,
+						fmt.Sprintf("⛔ Команда %s пока не поддерживается.", msgContent.Name),
+					),
+				)
 
 			default:
 				w.WriteResponse(chat.NewMessage(chat.RoleAssistant,
@@ -85,6 +94,23 @@ func myGeneticsCodelabs() server.Handler {
 	return server.HandlerFunc(
 		func(ctx context.Context, w server.ResponseWriter, r *server.Request) {
 			access := mygenetics.AccessToken(r.From.Tokens)
+
+			commands := content.Commands{
+				Items: []content.Command{
+					{
+						Name:        "mygenetics",
+						Description: "Показать список анализов",
+					},
+					{
+						Name:        "mygenetics_ai",
+						Description: "Показать список анализов с интерпретацией ИИ",
+					},
+				},
+			}
+
+			w.WriteResponse(
+				chat.NewMessage(chat.RoleAssistant, commands),
+			)
 
 			codelabs, err := mygenetics.DefaultClient.FetchCodelabs(ctx, access)
 			if err != nil {
@@ -107,33 +133,33 @@ func myGeneticsCodelabs() server.Handler {
 				return
 			}
 
-			content := chat.SelectContent{
+			msgContent := content.Select{
 				Header: "🧪 Выберите анализ, чтобы просмотреть детальные результаты:",
 			}
 			for _, codelab := range codelabs {
-				content.Items = append(content.Items, chat.SelectContentItem{
+				msgContent.Items = append(msgContent.Items, content.SelectItem{
 					Caption: fmt.Sprintf("%s (%s)", codelab.Name, codelab.Code),
 					Data:    codelab.Code,
 				})
 			}
 
 			w.WriteResponse(
-				chat.NewMessage(chat.RoleAssistant, content),
+				chat.NewMessage(chat.RoleAssistant, msgContent),
 			)
 
-			content = chat.SelectContent{
+			msgContent = content.Select{
 				Header: "🧪 Выберите анализ для получения " +
 					"развёрнутой интерпретации результатов с помощью ИИ:",
 			}
 			for _, codelab := range codelabs {
-				content.Items = append(content.Items, chat.SelectContentItem{
+				msgContent.Items = append(msgContent.Items, content.SelectItem{
 					Caption: fmt.Sprintf("%s (%s)", codelab.Name, codelab.Code),
 					Data:    "ai:" + codelab.Code,
 				})
 			}
 
 			w.WriteResponse(
-				chat.NewMessage(chat.RoleAssistant, content),
+				chat.NewMessage(chat.RoleAssistant, msgContent),
 			)
 		},
 	)

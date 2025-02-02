@@ -8,6 +8,7 @@ import (
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/muzykantov/health-gpt/chat"
+	"github.com/muzykantov/health-gpt/chat/content"
 	"github.com/muzykantov/health-gpt/chat/user"
 	"github.com/muzykantov/health-gpt/llm"
 )
@@ -20,18 +21,13 @@ var (
 	ErrTelegramInvalidMessageContent  = errors.New("telegram invalid message content")
 )
 
-// ChatHistoryWriter сохраняет сообщения в историю диалога.
-type ChatHistoryWriter interface {
-	WriteChatHistoryMessage(ctx context.Context, chatID int64, msg chat.Message) error
-}
-
 // Telegram управляет взаимодействием с Telegram Bot API.
 type Telegram struct {
 	Token               string
 	Handler             Handler
 	Completion          ChatCompleter
 	History             ChatHistoryReadWriter
-	User                UserManager
+	User                UserStorage
 	Debug               bool
 	UnsupportedResponse func() chat.Message
 	ErrorLog            *log.Logger
@@ -119,9 +115,19 @@ func (t *Telegram) ListenAndServe(ctx context.Context) error {
 					continue
 				}
 
-				incoming = chat.Message{
-					Role:    chat.RoleUser,
-					Content: update.Message.Text,
+				if update.Message.IsCommand() {
+					incoming = chat.Message{
+						Role: chat.RoleUser,
+						Content: content.Command{
+							Name: update.Message.Command(),
+							Args: update.Message.CommandArguments(),
+						},
+					}
+				} else {
+					incoming = chat.Message{
+						Role:    chat.RoleUser,
+						Content: update.Message.Text,
+					}
 				}
 
 			case update.CallbackQuery != nil &&
@@ -152,7 +158,7 @@ func (t *Telegram) ListenAndServe(ctx context.Context) error {
 
 				incoming = chat.Message{
 					Role: chat.RoleUser,
-					Content: chat.SelectContentItem{
+					Content: content.SelectItem{
 						Caption: caption,
 						Data:    update.CallbackQuery.Data,
 					},
@@ -212,17 +218,16 @@ func SendTelegramMessage(sender *tgbotapi.BotAPI, chatID int64, m chat.Message) 
 		return nil
 	}
 
-	switch content := m.Content.(type) {
+	switch msgContent := m.Content.(type) {
 	case string:
-		msg := tgbotapi.NewMessage(chatID, content)
+		msg := tgbotapi.NewMessage(chatID, msgContent)
 		msg.ParseMode = tgbotapi.ModeHTML
 
 		_, err = sender.Send(msg)
-		return
 
-	case chat.SelectContent:
-		var buttons = make([][]tgbotapi.InlineKeyboardButton, 0, len(content.Items))
-		for _, item := range content.Items {
+	case content.Select:
+		var buttons = make([][]tgbotapi.InlineKeyboardButton, 0, len(msgContent.Items))
+		for _, item := range msgContent.Items {
 			buttons = append(
 				buttons,
 				tgbotapi.NewInlineKeyboardRow(
@@ -231,15 +236,29 @@ func SendTelegramMessage(sender *tgbotapi.BotAPI, chatID int64, m chat.Message) 
 			)
 		}
 
-		msg := tgbotapi.NewMessage(chatID, content.Header)
+		msg := tgbotapi.NewMessage(chatID, msgContent.Header)
 		msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(buttons...)
 
 		_, err = sender.Send(msg)
-		return
+
+	case content.Commands:
+		commands := make([]tgbotapi.BotCommand, 0, len(msgContent.Items))
+		for _, item := range msgContent.Items {
+			commands = append(commands, tgbotapi.BotCommand{
+				Command:     item.Name,
+				Description: item.Description,
+			})
+		}
+
+		cmd := tgbotapi.NewSetMyCommands(commands...)
+
+		_, err = sender.Request(cmd)
 
 	default:
-		return ErrTelegramUnsupportedMessageType
+		err = ErrTelegramUnsupportedMessageType
 	}
+
+	return
 }
 
 // telegramResponseWriter адаптирует отправку сообщений к интерфейсу ResponseWriter.

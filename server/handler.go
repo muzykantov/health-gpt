@@ -18,8 +18,8 @@ type ChatCompleter interface {
 	CompleteChat(ctx context.Context, msgs []chat.Message) (chat.Message, error)
 }
 
-// UserManager хранит информацию о пользователях.
-type UserManager interface {
+// UserStorage хранит информацию о пользователях.
+type UserStorage interface {
 	SaveUser(ctx context.Context, user chat.User) error
 	GetUser(ctx context.Context, userID int64) (chat.User, error)
 }
@@ -32,7 +32,7 @@ type Request struct {
 
 	Completer ChatCompleter         // Сервис генерации ответов.
 	History   ChatHistoryReadWriter // Сервис чтения и записи истории диалога.
-	User      UserManager           // Сервис управления пользователями.
+	User      UserStorage           // Сервис управления пользователями.
 
 	ErrorLog *log.Logger // Сервис логирования ошибок
 }
