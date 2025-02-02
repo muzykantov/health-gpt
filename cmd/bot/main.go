@@ -17,6 +17,7 @@ import (
 	"github.com/muzykantov/health-gpt/handler/middleware"
 	"github.com/muzykantov/health-gpt/llm"
 	"github.com/muzykantov/health-gpt/server"
+	"github.com/muzykantov/health-gpt/server/telegram"
 )
 
 const MsgUnsupportedType = "❌ Тип сообщения не поддерживается."
@@ -105,7 +106,7 @@ func main() {
 	}
 
 	// Создаем и конфигурируем сервер.
-	srv := &server.Telegram{
+	srv := &telegram.Server{
 		Token:               cfg.Telegram.Token,
 		Handler:             handler,
 		Completion:          ai,

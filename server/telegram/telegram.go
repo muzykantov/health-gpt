@@ -1,4 +1,4 @@
-package server
+package telegram
 
 import (
 	"context"
@@ -11,6 +11,7 @@ import (
 	"github.com/muzykantov/health-gpt/chat/content"
 	"github.com/muzykantov/health-gpt/chat/user"
 	"github.com/muzykantov/health-gpt/llm"
+	"github.com/muzykantov/health-gpt/server"
 )
 
 // Определяем основные ошибки при работе с Telegram API.
@@ -21,20 +22,20 @@ var (
 	ErrTelegramInvalidMessageContent  = errors.New("telegram invalid message content")
 )
 
-// Telegram управляет взаимодействием с Telegram Bot API.
-type Telegram struct {
+// Server управляет взаимодействием с Server Bot API.
+type Server struct {
 	Token               string
-	Handler             Handler
-	Completion          ChatCompleter
-	History             ChatHistoryReadWriter
-	User                UserStorage
+	Handler             server.Handler
+	Completion          server.ChatCompleter
+	History             server.ChatHistoryReadWriter
+	User                server.UserStorage
 	Debug               bool
 	UnsupportedResponse func() chat.Message
 	ErrorLog            *log.Logger
 }
 
 // ListenAndServe запускает основной цикл обработки сообщений.
-func (t *Telegram) ListenAndServe(ctx context.Context) error {
+func (t *Server) ListenAndServe(ctx context.Context) error {
 	if t.Token == "" {
 		return ErrTelegramTokenNotProvided
 	}
@@ -197,7 +198,7 @@ func (t *Telegram) ListenAndServe(ctx context.Context) error {
 						chatID: chatID,
 						sender: bot,
 					},
-					&Request{
+					&server.Request{
 						ChatID:   chatID,
 						Incoming: incoming,
 						From:     from,
