@@ -85,7 +85,7 @@ func myGeneticsChat() server.Handler {
 			msgs := make([]chat.Message, 0, 1+len(allFeatures)+len(filteredHistory)+1)
 			msgs = append(msgs, chat.MsgS(myGeneticsChatPrompt))
 			for _, feature := range allFeatures {
-				msgs = append(msgs, chat.MsgA(feature))
+				msgs = append(msgs, chat.MsgU(feature))
 			}
 			msgs = append(msgs, filteredHistory...)
 			msgs = append(msgs, chat.MsgU(msgText))
