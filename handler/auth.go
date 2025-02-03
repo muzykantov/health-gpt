@@ -1,7 +1,8 @@
-package middleware
+package handler
 
 import (
 	"context"
+	_ "embed"
 	"encoding/json"
 	"time"
 
@@ -10,23 +11,8 @@ import (
 	"github.com/muzykantov/health-gpt/server"
 )
 
-const AuthPrompt = `
-Твоя задача получить email и пароль пользователя или найти email и пароль пользователя в диалоге.
-Если email или пароль не указан:
-Ответить коротким, дружелюбным сообщением с просьбой предоставить последовательно email затем пароль
-(укажи требования к паролю), зарегестрированном на сайте mygenetics.ru для продолжения работы с
-ботом. Тон общения вежливый, на 'Вы'. 
-Если email и пароль найдены:
-ВЕРНУТЬ В ФОРМАТЕ {"email": "email@example.com", "password": "password"} БЕЗ КАКИХ ЛИБО КОММЕНТАРИЕВ! 
-ВАЖНО:
-- пароль должен быть не меньше 6 символов
-- не помогай вспомнить, найти или восстановить пароль
-- не говори что ты модель
-- не говори что не хочешь говорить на какую-то тему, просто запроси данные
-- если пользователь ответил не email или не пароль, извинись что не можешь помочь пока не получишь нужные данные
-- если он не знает или не помнит или ведет беседу, то извинись и скажи что не можешь помочь
-- можешь использовать Emoji
-`
+//go:embed prompts/auth.txt
+var AuthPrompt string
 
 func Auth(next server.Handler) server.Handler {
 	return server.HandlerFunc(
@@ -46,12 +32,12 @@ func Auth(next server.Handler) server.Handler {
 					r.From.Email,
 					r.From.Password,
 				); err != nil {
-					server.WriteError(w, r, "⛔ Ошибка аутентификации mygenetics: %v", err)
+					w.WriteResponse(chat.MsgAf("⛔ Ошибка аутентификации mygenetics: %v", err))
 					return
 				}
 
 				if err := r.User.SaveUser(ctx, r.From); err != nil {
-					server.WriteError(w, r, "⛔ Ошибка обновления информации о пользователе: %v", err)
+					w.WriteResponse(chat.MsgAf("⛔ Ошибка обновления информации о пользователе: %v", err))
 					return
 				}
 
@@ -62,14 +48,14 @@ func Auth(next server.Handler) server.Handler {
 			// Если пользователь ешё не ввел email и пароль, то читаем историю чата.
 			msgs, err := r.History.ReadChatHistory(ctx, r.ChatID, 0)
 			if err != nil {
-				server.WriteError(w, r, "⛔ Ошибка получения истории чата: %v", err)
+				w.WriteResponse(chat.MsgAf("⛔ Ошибка получения истории чата: %v", err))
 				return
 			}
 
 			// Пользователь ноывй? Добавляем инстукции для ИИ получить email и пароль.
 			if len(msgs) == 0 {
 				msgs = []chat.Message{
-					chat.NewMessage(chat.RoleSystem, AuthPrompt),
+					chat.MsgS(AuthPrompt),
 				}
 			}
 
@@ -79,7 +65,7 @@ func Auth(next server.Handler) server.Handler {
 			// Даем ИИ разобраться с сообщениями и решить что делать дальше.
 			response, err := r.Completer.CompleteChat(ctx, msgs)
 			if err != nil {
-				server.WriteError(w, r, "⛔ Ошибка генерации ответа: %v", err)
+				w.WriteResponse(chat.MsgAf("⛔ Ошибка генерации ответа: %v", err))
 				return
 			}
 
@@ -88,11 +74,11 @@ func Auth(next server.Handler) server.Handler {
 				msgs = append(msgs, response)
 
 				if err := r.History.WriteChatHistory(ctx, r.ChatID, msgs); err != nil {
-					server.WriteError(w, r, "⛔ Ошибка сохранения истории чата: %v", err)
+					w.WriteResponse(chat.MsgAf("⛔ Ошибка сохранения истории чата: %v", err))
 					return
 				}
 
-				server.WriteResponse(w, r, response)
+				w.WriteResponse(response)
 				return
 			}
 
@@ -105,7 +91,7 @@ func Auth(next server.Handler) server.Handler {
 				[]byte(response.Content.(string)),
 				&credentials,
 			); err != nil {
-				server.WriteError(w, r, "⛔ Ошибка парсинга ответа: %v", err)
+				w.WriteResponse(chat.MsgAf("⛔ Ошибка парсинга ответа: %v", err))
 				return
 			}
 
@@ -117,11 +103,8 @@ func Auth(next server.Handler) server.Handler {
 			)
 			if err != nil {
 				// Если не получилось, то сбрасываем переписку и отправляем ответ пользователю.
-				server.WriteResponse(w, r,
-					chat.NewMessage(
-						chat.RoleAssistant,
-						"❌ Имя пользователя или пароль не подходят. Попробуйте ещё раз.",
-					),
+				w.WriteResponse(
+					chat.MsgA("❌ Имя пользователя или пароль не подходят. Попробуйте ещё раз."),
 				)
 
 				if err := r.History.WriteChatHistory(
@@ -129,8 +112,7 @@ func Auth(next server.Handler) server.Handler {
 					r.ChatID,
 					make([]chat.Message, 0),
 				); err != nil {
-					server.WriteError(w, r, "⛔ Ошибка сохранения истории чата: %v", err)
-					return
+					w.WriteResponse(chat.MsgAf("⛔ Ошибка сохранения истории чата: %v", err))
 				}
 				return
 			}
@@ -141,7 +123,7 @@ func Auth(next server.Handler) server.Handler {
 			r.From.Tokens = tokens
 			r.From.State = chat.UserStateAuthorized
 			if err := r.User.SaveUser(ctx, r.From); err != nil {
-				server.WriteError(w, r, "⛔ Ошибка сохранения пользователя: %v", err)
+				w.WriteResponse(chat.MsgAf("⛔ Ошибка сохранения пользователя: %v", err))
 				return
 			}
 
@@ -151,16 +133,11 @@ func Auth(next server.Handler) server.Handler {
 				r.ChatID,
 				make([]chat.Message, 0),
 			); err != nil {
-				server.WriteError(w, r, "⛔ Ошибка сохранения истории чата: %v", err)
+				w.WriteResponse(chat.MsgAf("⛔ Ошибка сохранения истории чата: %v", err))
 				return
 			}
 
-			server.WriteResponse(w, r,
-				chat.NewMessage(
-					chat.RoleAssistant,
-					"✅ Вы успешно вошли в систему! Благодарим за предоставленные данные.",
-				),
-			)
+			w.WriteResponse(chat.MsgA("✅ Вы успешно вошли в систему! Благодарим за предоставленные данные."))
 
 			// Передаем запрос дальше.
 			r.Incoming = chat.NewMessage(chat.RoleUser, "")

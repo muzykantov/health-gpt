@@ -195,8 +195,9 @@ func (t *Server) ListenAndServe(ctx context.Context) error {
 				t.Handler.Serve(
 					ctx,
 					&telegramResponseWriter{
-						chatID: chatID,
-						sender: bot,
+						chatID:   chatID,
+						sender:   bot,
+						errorLog: errorLog,
 					},
 					&server.Request{
 						ChatID:   chatID,
@@ -264,12 +265,22 @@ func SendTelegramMessage(sender *tgbotapi.BotAPI, chatID int64, m chat.Message) 
 
 // telegramResponseWriter адаптирует отправку сообщений к интерфейсу ResponseWriter.
 type telegramResponseWriter struct {
-	chatID int64
-	sender *tgbotapi.BotAPI
+	chatID   int64
+	sender   *tgbotapi.BotAPI
+	errorLog *log.Logger
 }
 
 func (trw *telegramResponseWriter) WriteResponse(m chat.Message) error {
-	return SendTelegramMessage(trw.sender, trw.chatID, m)
+	if m.IsEmpty() {
+		return nil
+	}
+
+	if err := SendTelegramMessage(trw.sender, trw.chatID, m); err != nil {
+		trw.errorLog.Printf("failed to send message to chatID %d: %v", trw.chatID, err)
+		return err
+	}
+
+	return nil
 }
 
 // unimplementedChatHistoryReadWriter предоставляет пустую реализацию интерфейса истории.

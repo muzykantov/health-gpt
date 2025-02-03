@@ -31,6 +31,36 @@ func NewMessage(role Role, content any) Message {
 	}
 }
 
+// MsgA создает новое сообщение от ассистента.
+func MsgA(content any) Message {
+	return NewMessage(RoleAssistant, content)
+}
+
+// MsgS создает новое системное сообщение.
+func MsgS(content any) Message {
+	return NewMessage(RoleSystem, content)
+}
+
+// MsgU создает новое сообщение от пользователя.
+func MsgU(content any) Message {
+	return NewMessage(RoleUser, content)
+}
+
+// MsgAf создает новое сообщение от ассистента с форматированием.
+func MsgAf(format string, a ...any) Message {
+	return MsgA(fmt.Sprintf(format, a...))
+}
+
+// MsgSf создает новое системное сообщение с форматированием.
+func MsgSf(format string, a ...any) Message {
+	return MsgS(fmt.Sprintf(format, a...))
+}
+
+// MsgUf создает новое сообщение от пользователя с форматированием.
+func MsgUf(format string, a ...any) Message {
+	return MsgU(fmt.Sprintf(format, a...))
+}
+
 // EmptyMessage представляет пустое сообщение.
 var EmptyMessage = Message{
 	Role:    RoleUndefined,

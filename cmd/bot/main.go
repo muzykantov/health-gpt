@@ -14,7 +14,6 @@ import (
 	"github.com/muzykantov/health-gpt/chat/user"
 	"github.com/muzykantov/health-gpt/config"
 	"github.com/muzykantov/health-gpt/handler"
-	"github.com/muzykantov/health-gpt/handler/middleware"
 	"github.com/muzykantov/health-gpt/llm"
 	"github.com/muzykantov/health-gpt/server"
 	"github.com/muzykantov/health-gpt/server/telegram"
@@ -65,9 +64,11 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Инициализируем обработчик.
-	handler := handler.MyGenetics()
-	handler = middleware.Auth(handler)
+	// Инициализируем обработчики.
+	var (
+		myGeneticsHandler = handler.MyGenetics()
+		authHandler       = handler.Auth(myGeneticsHandler)
+	)
 
 	// Инициализируем хранилище истории.
 	var historyStorage server.ChatHistoryReadWriter
@@ -108,7 +109,7 @@ func main() {
 	// Создаем и конфигурируем сервер.
 	srv := &telegram.Server{
 		Token:               cfg.Telegram.Token,
-		Handler:             handler,
+		Handler:             authHandler,
 		Completion:          ai,
 		History:             historyStorage,
 		User:                userStorage,

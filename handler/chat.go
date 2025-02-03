@@ -8,8 +8,8 @@ import (
 	"github.com/muzykantov/health-gpt/server"
 )
 
-// ChatBot - простая LLM для тестирования.
-func ChatBot() server.Handler {
+// Chat - простая LLM для тестирования.
+func Chat() server.Handler {
 	return server.HandlerFunc(
 		func(ctx context.Context, w server.ResponseWriter, r *server.Request) {
 			if _, ok := r.Incoming.Content.(string); !ok {
