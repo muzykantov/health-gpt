@@ -59,6 +59,10 @@ func Auth(next server.Handler) server.Handler {
 				}
 			}
 
+			if _, ok := r.Incoming.Content.(string); !ok {
+				r.Incoming.Content = "Привет."
+			}
+
 			// Добавляем присланное пользователем сообщение в контекст.
 			msgs = append(msgs, r.Incoming)
 
