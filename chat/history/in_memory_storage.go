@@ -7,21 +7,21 @@ import (
 	"github.com/muzykantov/health-gpt/chat"
 )
 
-// InMemory реализует потокобезопасное хранение истории сообщений в памяти.
-type InMemory struct {
+// InMemoryStorage реализует потокобезопасное хранение истории сообщений в памяти.
+type InMemoryStorage struct {
 	mu      sync.RWMutex
 	history map[int64][]chat.Message
 }
 
 // NewInMemory создает новое хранилище сообщений.
-func NewInMemory() *InMemory {
-	return &InMemory{
+func NewInMemory() *InMemoryStorage {
+	return &InMemoryStorage{
 		history: make(map[int64][]chat.Message),
 	}
 }
 
 // ReadChatHistory читает историю сообщений из хранилища.
-func (m *InMemory) ReadChatHistory(
+func (m *InMemoryStorage) ReadChatHistory(
 	ctx context.Context,
 	chatID int64,
 	limit uint64,
@@ -41,7 +41,7 @@ func (m *InMemory) ReadChatHistory(
 }
 
 // WriteChatHistory записывает историю сообщений в хранилище.
-func (m *InMemory) WriteChatHistory(
+func (m *InMemoryStorage) WriteChatHistory(
 	ctx context.Context,
 	chatID int64,
 	msgs []chat.Message,
