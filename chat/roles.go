@@ -22,6 +22,6 @@ func (r Role) String() string {
 	case RoleSystem:
 		return "system"
 	default:
-		return "Unknown"
+		return "unknown"
 	}
 }

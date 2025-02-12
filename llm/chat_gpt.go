@@ -121,7 +121,7 @@ func (c *ChatGPT) CompleteChat(ctx context.Context, msgs []chat.Message) (chat.M
 		}
 
 		var role string
-		switch msg.Role {
+		switch msg.Sender {
 		case chat.RoleUser:
 			role = openai.ChatMessageRoleUser
 		case chat.RoleAssistant:
@@ -132,7 +132,7 @@ func (c *ChatGPT) CompleteChat(ctx context.Context, msgs []chat.Message) (chat.M
 			return chat.EmptyMessage, fmt.Errorf(
 				"%w: %v",
 				ErrChatGPTUnsupportedRole,
-				msg.Role,
+				msg.Sender,
 			)
 		}
 
@@ -170,7 +170,7 @@ func (c *ChatGPT) CompleteChat(ctx context.Context, msgs []chat.Message) (chat.M
 
 	// Преобразование ответа в нужный формат.
 	return chat.Message{
-		Role:    chat.RoleAssistant,
+		Sender:  chat.RoleAssistant,
 		Content: resp.Choices[0].Message.Content,
 	}, nil
 }

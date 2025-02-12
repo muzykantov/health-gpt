@@ -1,33 +1,43 @@
 package chat
 
-import "fmt"
+import (
+	"fmt"
+	"time"
+)
+
+// Now можно переопределить в тестах.
+var Now = time.Now
 
 // Message объединяет роль и содержимое сообщения.
 type Message struct {
-	Role
-	Content any
+	Sender    Role
+	Content   any
+	CreatedAt time.Time
 }
 
 // IsEmpty проверяет, является ли сообщение пустым.
 func (m Message) IsEmpty() bool {
-	return m.Role == RoleUndefined && m.Content == nil
+	return m.Sender == RoleUndefined && m.Content == nil
 }
 
 // Equals проверяет, равны ли два сообщения.
 func (m Message) Equals(other Message) bool {
-	return m.Role == other.Role && m.Content == other.Content
+	return m.Sender == other.Sender &&
+		m.Content == other.Content &&
+		m.CreatedAt.Equal(other.CreatedAt)
 }
 
 // String возвращает строковое представление сообщения.
 func (m Message) String() string {
-	return fmt.Sprintf("%s: %v", m.Role, m.Content)
+	return fmt.Sprintf("%s: %v", m.Sender, m.Content)
 }
 
 // NewMessage создает новое сообщение.
 func NewMessage(role Role, content any) Message {
 	return Message{
-		Role:    role,
-		Content: content,
+		Sender:    role,
+		Content:   content,
+		CreatedAt: Now().UTC(),
 	}
 }
 
@@ -63,6 +73,6 @@ func MsgUf(format string, a ...any) Message {
 
 // EmptyMessage представляет пустое сообщение.
 var EmptyMessage = Message{
-	Role:    RoleUndefined,
+	Sender:  RoleUndefined,
 	Content: nil,
 }

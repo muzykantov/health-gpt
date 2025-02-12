@@ -38,11 +38,11 @@ func TestChatGPTCompletion_Integration(t *testing.T) {
 	// Подготовка запроса.
 	messages := []chat.Message{
 		{
-			Role:    chat.RoleSystem,
+			Sender:  chat.RoleSystem,
 			Content: "Ты - полезный ассистент. Отвечай кратко, в одно предложение.",
 		},
 		{
-			Role:    chat.RoleUser,
+			Sender:  chat.RoleUser,
 			Content: "Какая столица России?",
 		},
 	}
@@ -52,7 +52,7 @@ func TestChatGPTCompletion_Integration(t *testing.T) {
 	require.NoError(t, err, "Failed to complete request")
 
 	// Проверка ответа.
-	require.Equal(t, chat.RoleAssistant, response.Role)
+	require.Equal(t, chat.RoleAssistant, response.Sender)
 
 	// Проверка текста ответа.
 	content, ok := response.Content.(string)

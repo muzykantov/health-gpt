@@ -5,190 +5,283 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strconv"
 )
 
-// BotConfig представляет основную конфигурацию приложения.
+// Configuration structure hierarchy represents a tree where each node
+// can be configured via both JSON and environment variables.
+// Order of precedence: environment variables > JSON > default values
+
+// BotConfig represents the root configuration of the application.
+// Each subsystem (LLM, Storage, etc.) has its own configuration section
+// to maintain separation of concerns.
 type BotConfig struct {
-	// LLM - обязательная секция, должен быть указан ActiveProvider.
+	// LLM section contains settings for language model providers
 	LLM LLMConfig
-	// Telegram - обязательная секция, требуется токен.
+	// Telegram section contains bot API credentials and settings
 	Telegram TelegramConfig
-	// Storage - обязательная секция.
+	// Storage section defines how different types of data are stored
 	Storage StorageConfig
 }
 
-// LLMConfig описывает настройки языковой модели.
+// LLMConfig defines settings for language model interactions.
+// Supports multiple providers through a provider-specific configuration.
 type LLMConfig struct {
-	// ActiveProvider - обязательное поле, указывает провайдера: "gigachat" или "chatgpt".
+	// ActiveProvider determines which provider configuration to use
+	// Valid values: "gigachat", "chatgpt"
 	ActiveProvider string
-	// GigaChat используется при ActiveProvider == "gigachat".
+	// Configuration sections for each supported provider
 	GigaChat GigaChatConfig
-	// ChatGPT используется при ActiveProvider == "chatgpt".
-	ChatGPT ChatGPTConfig
+	ChatGPT  ChatGPTConfig
 }
 
-// GigaChatConfig содержит настройки для GigaChat.
+// GigaChatConfig contains settings specific to GigaChat provider.
+// All floating-point parameters use float64 for consistency.
 type GigaChatConfig struct {
-	// ClientID - обязательное поле для аутентификации.
-	ClientID string
-	// ClientSecret - обязательное поле для аутентификации.
+	// Authentication credentials
+	ClientID     string
 	ClientSecret string
-	// Model - опционально, по умолчанию "GigaChat-Max".
-	Model string
-	// Temperature - опционально, по умолчанию 0.1 (диапазон 0.0-2.0).
-	Temperature float64
-	// TopP - опционально, по умолчанию 1.0 (диапазон 0.0-1.0).
-	TopP float64
-	// MaxTokens - опционально, по умолчанию 2048.
-	MaxTokens int64
-	// RepetitionPenalty - опционально, по умолчанию 1.0.
-	RepetitionPenalty float64
+	// Model configuration
+	Model             string  `json:"model"`              // Default: "GigaChat-Max"
+	Temperature       float64 `json:"temperature"`        // Range: [0.0, 2.0], Default: 0.1
+	TopP              float64 `json:"top_p"`              // Range: [0.0, 1.0], Default: 1.0
+	MaxTokens         int     `json:"max_tokens"`         // Default: 2048
+	RepetitionPenalty float64 `json:"repetition_penalty"` // Default: 1.0
 }
 
-// ChatGPTConfig содержит настройки для ChatGPT.
+// ChatGPTConfig contains settings specific to ChatGPT provider.
+// All floating-point parameters use float64 for consistency.
 type ChatGPTConfig struct {
-	// APIKey - обязательное поле для аутентификации.
+	// Authentication credentials
 	APIKey string
-	// Model - опционально, по умолчанию "gpt-4o".
-	Model string
-	// Temperature - опционально, по умолчанию 0.1 (диапазон 0.0-2.0).
-	Temperature float32
-	// TopP - опционально, по умолчанию 1.0 (диапазон 0.0-1.0).
-	TopP float32
-	// MaxTokens - опционально, по умолчанию 2048.
-	MaxTokens int
-	// SocksProxy - опционально, по умолчанию пустая строка.
-	SocksProxy string
+	// Model configuration
+	Model       string  `json:"model"`       // Default: "gpt-4"
+	Temperature float64 `json:"temperature"` // Range: [0.0, 2.0], Default: 0.1
+	TopP        float64 `json:"top_p"`       // Range: [0.0, 1.0], Default: 1.0
+	MaxTokens   int     `json:"max_tokens"`  // Default: 2048
+	SocksProxy  string  `json:"socks_proxy"` // Optional SOCKS proxy URL
 }
 
-// TelegramConfig описывает настройки Telegram бота.
+// TelegramConfig contains settings for the Telegram bot API.
 type TelegramConfig struct {
-	// Token - обязательное поле, токен доступа к Telegram API.
-	Token string
-	// Debug - опционально, по умолчанию true.
-	Debug bool
+	Token string // Bot API token from BotFather
+	Debug bool   // Enables debug logging when true
 }
 
-// StorageConfig описывает настройки хранилища.
+// StorageConfig defines how different types of data are persisted.
+// Each data type can use its own storage backend.
 type StorageConfig struct {
-	// История чатов.
+	// Database configuration for persistent storage
+	Postgres PostgresConfig
+	// Chat history storage configuration
 	History HistoryStorageConfig
-	// Данные пользователей.
+	// User data storage configuration
 	Users UserStorageConfig
 }
 
-// HistoryStorageConfig описывает настройки хранилища истории.
+// PostgresConfig contains all necessary settings for PostgreSQL connection.
+// Supports configuration via environment variables for secure deployment.
+type PostgresConfig struct {
+	Host     string `json:"host"`     // Database host
+	Port     int    `json:"port"`     // Database port
+	User     string `json:"user"`     // Database user
+	Password string `json:"password"` // Database password
+	Database string `json:"database"` // Database name
+	SSLMode  string `json:"ssl_mode"` // SSL mode (disable, require, verify-full)
+}
+
+// HistoryStorageConfig defines how chat history is stored.
 type HistoryStorageConfig struct {
-	// Type - опционально, по умолчанию "memory". Доступные значения: "file", "memory".
-	Type string
-	// Path - обязательно только при Type == "file", по умолчанию "./data/history".
-	Path string
+	// Storage type: "postgres", "file", "memory"
+	Type string `json:"type"`
+	// File path for "file" storage type
+	Path string `json:"path"`
 }
 
-// UserStorageConfig описывает настройки хранилища пользователей.
+// UserStorageConfig defines how user data is stored.
 type UserStorageConfig struct {
-	// Type - опционально, по умолчанию "file". Доступные значения: "file", "memory".
-	Type string
-	// Path - обязательно только при Type == "file", по умолчанию "./data/users".
-	Path string
+	// Storage type: "postgres", "file", "memory"
+	Type string `json:"type"`
+	// File path for "file" storage type
+	Path string `json:"path"`
 }
 
-// LoadConfig читает конфигурацию из io.Reader и затем применяет переменные окружения
+// LoadConfig reads configuration from reader and applies environment variables.
+// Environment variables take precedence over file configuration.
 func LoadConfig(r io.Reader) (*BotConfig, error) {
 	var cfg BotConfig
 	decoder := json.NewDecoder(r)
 	if err := decoder.Decode(&cfg); err != nil {
-		return nil, fmt.Errorf("ошибка декодирования JSON: %w", err)
+		return nil, fmt.Errorf("decode JSON configuration: %w", err)
 	}
 
-	// Применяем переменные окружения поверх значений из JSON
 	applyEnvironmentVariables(&cfg)
 
 	if err := validateConfig(&cfg); err != nil {
-		return nil, fmt.Errorf("ошибка валидации конфига: %w", err)
+		return nil, fmt.Errorf("validate configuration: %w", err)
 	}
 
 	setDefaults(&cfg)
 	return &cfg, nil
 }
 
-// LoadBotConfigFromFile читает конфигурацию из файла
+// LoadBotConfigFromFile loads configuration from the specified file.
 func LoadBotConfigFromFile(filename string) (*BotConfig, error) {
 	file, err := os.Open(filename)
 	if err != nil {
-		return nil, fmt.Errorf("ошибка открытия файла: %w", err)
+		return nil, fmt.Errorf("open config file: %w", err)
 	}
 	defer file.Close()
 
 	return LoadConfig(file)
 }
 
-// applyEnvironmentVariables применяет значения из переменных окружения
+// applyEnvironmentVariables overrides configuration with environment variables.
 func applyEnvironmentVariables(cfg *BotConfig) {
 	// LLM Configuration
-	if provider := os.Getenv("LLM_ACTIVE_PROVIDER"); provider != "" {
-		cfg.LLM.ActiveProvider = provider
+	if v := os.Getenv("LLM_PROVIDER"); v != "" {
+		cfg.LLM.ActiveProvider = v
 	}
 
 	// GigaChat Configuration
-	if clientID := os.Getenv("GIGACHAT_CLIENT_ID"); clientID != "" {
-		cfg.LLM.GigaChat.ClientID = clientID
+	if v := os.Getenv("GIGACHAT_CLIENT_ID"); v != "" {
+		cfg.LLM.GigaChat.ClientID = v
 	}
-	if clientSecret := os.Getenv("GIGACHAT_CLIENT_SECRET"); clientSecret != "" {
-		cfg.LLM.GigaChat.ClientSecret = clientSecret
+	if v := os.Getenv("GIGACHAT_CLIENT_SECRET"); v != "" {
+		cfg.LLM.GigaChat.ClientSecret = v
 	}
 
 	// ChatGPT Configuration
-	if apiKey := os.Getenv("CHATGPT_API_KEY"); apiKey != "" {
-		cfg.LLM.ChatGPT.APIKey = apiKey
+	if v := os.Getenv("CHATGPT_API_KEY"); v != "" {
+		cfg.LLM.ChatGPT.APIKey = v
 	}
 
 	// Telegram Configuration
-	if token := os.Getenv("TELEGRAM_BOT_TOKEN"); token != "" {
-		cfg.Telegram.Token = token
+	if v := os.Getenv("TELEGRAM_TOKEN"); v != "" {
+		cfg.Telegram.Token = v
+	}
+
+	// PostgreSQL Configuration
+	if v := os.Getenv("POSTGRES_HOST"); v != "" {
+		cfg.Storage.Postgres.Host = v
+	}
+	if v := os.Getenv("POSTGRES_PORT"); v != "" {
+		if port, err := strconv.Atoi(v); err == nil {
+			cfg.Storage.Postgres.Port = port
+		}
+	}
+	if v := os.Getenv("POSTGRES_USER"); v != "" {
+		cfg.Storage.Postgres.User = v
+	}
+	if v := os.Getenv("POSTGRES_PASSWORD"); v != "" {
+		cfg.Storage.Postgres.Password = v
+	}
+	if v := os.Getenv("POSTGRES_DB"); v != "" {
+		cfg.Storage.Postgres.Database = v
+	}
+	if v := os.Getenv("POSTGRES_SSL_MODE"); v != "" {
+		cfg.Storage.Postgres.SSLMode = v
 	}
 }
 
-// validateConfig проверяет наличие обязательных полей
+// validateConfig ensures all required fields are set and values are within valid ranges.
 func validateConfig(cfg *BotConfig) error {
-	// Проверка LLM секции
-	if cfg.LLM.ActiveProvider == "" {
-		return fmt.Errorf("не указан ActiveProvider в секции LLM")
+	// Validate LLM configuration
+	if err := validateLLMConfig(&cfg.LLM); err != nil {
+		return fmt.Errorf("LLM config: %w", err)
 	}
 
-	switch cfg.LLM.ActiveProvider {
-	case "gigachat":
-		if cfg.LLM.GigaChat.ClientID == "" {
-			return fmt.Errorf("не указан ClientID для GigaChat")
-		}
-		if cfg.LLM.GigaChat.ClientSecret == "" {
-			return fmt.Errorf("не указан ClientSecret для GigaChat")
-		}
-	case "chatgpt":
-		if cfg.LLM.ChatGPT.APIKey == "" {
-			return fmt.Errorf("не указан APIKey для ChatGPT")
-		}
-	default:
-		return fmt.Errorf("неизвестный провайдер LLM: %s", cfg.LLM.ActiveProvider)
-	}
-
-	// Проверка Telegram секции
+	// Validate Telegram configuration
 	if cfg.Telegram.Token == "" {
-		return fmt.Errorf("не указан Token в секции Telegram")
+		return fmt.Errorf("telegram token is required")
 	}
 
-	// Проверка путей в Storage при использовании file
+	// Validate PostgreSQL configuration when used
+	if cfg.Storage.History.Type == "postgres" || cfg.Storage.Users.Type == "postgres" {
+		if err := validatePostgresConfig(&cfg.Storage.Postgres); err != nil {
+			return fmt.Errorf("postgreSQL config: %w", err)
+		}
+	}
+
+	// Validate file paths when file storage is used
 	if cfg.Storage.History.Type == "file" && cfg.Storage.History.Path == "" {
-		return fmt.Errorf("не указан Path для file storage в секции History")
+		return fmt.Errorf("history storage: path is required for file storage")
 	}
 	if cfg.Storage.Users.Type == "file" && cfg.Storage.Users.Path == "" {
-		return fmt.Errorf("не указан Path для file storage в секции Users")
+		return fmt.Errorf("user storage: path is required for file storage")
 	}
 
 	return nil
 }
 
-// setDefaults устанавливает значения по умолчанию для опциональных полей
+// validateLLMConfig validates language model configuration.
+func validateLLMConfig(cfg *LLMConfig) error {
+	if cfg.ActiveProvider == "" {
+		return fmt.Errorf("active provider is required")
+	}
+
+	switch cfg.ActiveProvider {
+	case "gigachat":
+		return validateGigaChatConfig(&cfg.GigaChat)
+	case "chatgpt":
+		return validateChatGPTConfig(&cfg.ChatGPT)
+	default:
+		return fmt.Errorf("unknown provider: %s", cfg.ActiveProvider)
+	}
+}
+
+// validateGigaChatConfig validates GigaChat-specific configuration.
+func validateGigaChatConfig(cfg *GigaChatConfig) error {
+	if cfg.ClientID == "" {
+		return fmt.Errorf("client ID is required")
+	}
+	if cfg.ClientSecret == "" {
+		return fmt.Errorf("client secret is required")
+	}
+	if cfg.Temperature < 0 || cfg.Temperature > 2.0 {
+		return fmt.Errorf("temperature must be between 0.0 and 2.0")
+	}
+	if cfg.TopP < 0 || cfg.TopP > 1.0 {
+		return fmt.Errorf("top_p must be between 0.0 and 1.0")
+	}
+	return nil
+}
+
+// validateChatGPTConfig validates ChatGPT-specific configuration.
+func validateChatGPTConfig(cfg *ChatGPTConfig) error {
+	if cfg.APIKey == "" {
+		return fmt.Errorf("API key is required")
+	}
+	if cfg.Temperature < 0 || cfg.Temperature > 2.0 {
+		return fmt.Errorf("temperature must be between 0.0 and 2.0")
+	}
+	if cfg.TopP < 0 || cfg.TopP > 1.0 {
+		return fmt.Errorf("top_p must be between 0.0 and 1.0")
+	}
+	return nil
+}
+
+// validatePostgresConfig validates PostgreSQL configuration.
+func validatePostgresConfig(cfg *PostgresConfig) error {
+	if cfg.Host == "" {
+		return fmt.Errorf("host is required")
+	}
+	if cfg.Port <= 0 || cfg.Port > 65535 {
+		return fmt.Errorf("port must be between 1 and 65535")
+	}
+	if cfg.User == "" {
+		return fmt.Errorf("user is required")
+	}
+	if cfg.Password == "" {
+		return fmt.Errorf("password is required")
+	}
+	if cfg.Database == "" {
+		return fmt.Errorf("database name is required")
+	}
+	return nil
+}
+
+// setDefaults sets default values for optional configuration fields.
 func setDefaults(cfg *BotConfig) {
 	// GigaChat defaults
 	if cfg.LLM.GigaChat.Model == "" {
@@ -209,7 +302,7 @@ func setDefaults(cfg *BotConfig) {
 
 	// ChatGPT defaults
 	if cfg.LLM.ChatGPT.Model == "" {
-		cfg.LLM.ChatGPT.Model = "gpt-4"
+		cfg.LLM.ChatGPT.Model = "gpt-4o"
 	}
 	if cfg.LLM.ChatGPT.Temperature == 0 {
 		cfg.LLM.ChatGPT.Temperature = 0.1
@@ -223,15 +316,17 @@ func setDefaults(cfg *BotConfig) {
 
 	// Storage defaults
 	if cfg.Storage.History.Type == "" {
-		cfg.Storage.History.Type = "memory"
-	}
-	if cfg.Storage.History.Type == "file" && cfg.Storage.History.Path == "" {
-		cfg.Storage.History.Path = "./data/history"
+		cfg.Storage.History.Type = "postgres"
 	}
 	if cfg.Storage.Users.Type == "" {
-		cfg.Storage.Users.Type = "file"
+		cfg.Storage.Users.Type = "postgres"
 	}
-	if cfg.Storage.Users.Type == "file" && cfg.Storage.Users.Path == "" {
-		cfg.Storage.Users.Path = "./data/users"
+
+	// PostgreSQL defaults
+	if cfg.Storage.Postgres.SSLMode == "" {
+		cfg.Storage.Postgres.SSLMode = "disable"
+	}
+	if cfg.Storage.Postgres.Port == 0 {
+		cfg.Storage.Postgres.Port = 5432
 	}
 }

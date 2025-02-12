@@ -118,16 +118,18 @@ func (t *Server) ListenAndServe(ctx context.Context) error {
 
 				if update.Message.IsCommand() {
 					incoming = chat.Message{
-						Role: chat.RoleUser,
+						Sender: chat.RoleUser,
 						Content: content.Command{
 							Name: update.Message.Command(),
 							Args: update.Message.CommandArguments(),
 						},
+						CreatedAt: chat.Now().UTC(),
 					}
 				} else {
 					incoming = chat.Message{
-						Role:    chat.RoleUser,
-						Content: update.Message.Text,
+						Sender:    chat.RoleUser,
+						Content:   update.Message.Text,
+						CreatedAt: chat.Now().UTC(),
 					}
 				}
 
@@ -158,11 +160,12 @@ func (t *Server) ListenAndServe(ctx context.Context) error {
 				}
 
 				incoming = chat.Message{
-					Role: chat.RoleUser,
+					Sender: chat.RoleUser,
 					Content: content.SelectItem{
 						Caption: caption,
 						Data:    update.CallbackQuery.Data,
 					},
+					CreatedAt: chat.Now().UTC(),
 				}
 
 			default:

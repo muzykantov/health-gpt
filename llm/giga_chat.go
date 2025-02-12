@@ -108,7 +108,7 @@ func (gc *GigaChat) CompleteChat(ctx context.Context, msgs []chat.Message) (chat
 		}
 
 		var role string
-		switch msg.Role {
+		switch msg.Sender {
 		case chat.RoleUser:
 			role = "user"
 		case chat.RoleAssistant:
@@ -119,7 +119,7 @@ func (gc *GigaChat) CompleteChat(ctx context.Context, msgs []chat.Message) (chat
 			return chat.EmptyMessage, fmt.Errorf(
 				"%w: %v",
 				ErrGigaChatUnsupportedRole,
-				msg.Role,
+				msg.Sender,
 			)
 		}
 
@@ -173,7 +173,7 @@ func (gc *GigaChat) CompleteChat(ctx context.Context, msgs []chat.Message) (chat
 
 	// Преобразование ответа в формат.
 	return chat.Message{
-		Role:    chat.RoleAssistant,
+		Sender:  chat.RoleAssistant,
 		Content: resp.Choices[0].Message.Content,
 	}, nil
 }

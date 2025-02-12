@@ -43,15 +43,15 @@ func main() {
 			llm.GigaChatWithTemperature(cfg.LLM.GigaChat.Temperature),
 			llm.GigaChatWithModel(cfg.LLM.GigaChat.Model),
 			llm.GigaChatWithTopP(cfg.LLM.GigaChat.TopP),
-			llm.GigaChatWithMaxTokens(cfg.LLM.GigaChat.MaxTokens),
+			llm.GigaChatWithMaxTokens(int64(cfg.LLM.GigaChat.MaxTokens)),
 			llm.GigaChatWithRepetitionPenalty(cfg.LLM.GigaChat.RepetitionPenalty),
 		)
 	case "chatgpt":
 		ai, err = llm.NewChatGPT(
 			cfg.LLM.ChatGPT.APIKey,
-			llm.ChatGPTWithTemperature(cfg.LLM.ChatGPT.Temperature),
+			llm.ChatGPTWithTemperature(float32(cfg.LLM.ChatGPT.Temperature)),
 			llm.ChatGPTWithModel(cfg.LLM.ChatGPT.Model),
-			llm.ChatGPTWithTopP(cfg.LLM.ChatGPT.TopP),
+			llm.ChatGPTWithTopP(float32(cfg.LLM.ChatGPT.TopP)),
 			llm.ChatGPTWithMaxTokens(cfg.LLM.ChatGPT.MaxTokens),
 			llm.ChatGPTWithSocksProxy(cfg.LLM.ChatGPT.SocksProxy),
 		)
