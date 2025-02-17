@@ -7,6 +7,7 @@ require (
 	github.com/paulrzcz/go-gigachat v0.1.1
 	github.com/stretchr/testify v1.10.0
 	golang.org/x/net v0.32.0
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
@@ -14,5 +15,4 @@ require (
 	github.com/google/uuid v1.5.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/sashabaranov/go-openai v1.36.0
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

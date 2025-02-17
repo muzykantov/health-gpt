@@ -20,6 +20,7 @@ coverage.html
 *.swo
 .DS_Store
 /.env
+/config.yaml
 /config.json
 
 # Зависимости и кэш

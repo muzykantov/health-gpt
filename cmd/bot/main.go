@@ -23,30 +23,20 @@ const MsgUnsupportedType = "❌ Тип сообщения не поддержи�
 
 func main() {
 	// Парсим флаги командной строки.
-	configPath := flag.String("config", "config.json", "path to configuration file")
+	configPath := flag.String("config", "config.yaml", "path to configuration file")
 	flag.Parse()
 
 	// Загружаем конфигурацию.
-	cfg, err := config.LoadBotConfigFromFile(*configPath)
+	cfg, err := config.FromFile(*configPath)
 	if err != nil {
-		fmt.Printf("Ошибка загрузки конфигурации: %v\n", err)
+		fmt.Printf("Error loading configuration: %v\n", err)
 		os.Exit(1)
 	}
 
 	// Инициализируем LLM в зависимости от конфигурации.
 	var ai server.ChatCompleter
-	switch cfg.LLM.ActiveProvider {
-	case "gigachat":
-		ai, err = llm.NewGigaChat(
-			cfg.LLM.GigaChat.ClientID,
-			cfg.LLM.GigaChat.ClientSecret,
-			llm.GigaChatWithTemperature(cfg.LLM.GigaChat.Temperature),
-			llm.GigaChatWithModel(cfg.LLM.GigaChat.Model),
-			llm.GigaChatWithTopP(cfg.LLM.GigaChat.TopP),
-			llm.GigaChatWithMaxTokens(int64(cfg.LLM.GigaChat.MaxTokens)),
-			llm.GigaChatWithRepetitionPenalty(cfg.LLM.GigaChat.RepetitionPenalty),
-		)
-	case "chatgpt":
+	switch cfg.LLM.Provider {
+	case config.ProviderChatGPT:
 		ai, err = llm.NewChatGPT(
 			cfg.LLM.ChatGPT.APIKey,
 			llm.ChatGPTWithTemperature(float32(cfg.LLM.ChatGPT.Temperature)),
@@ -56,11 +46,12 @@ func main() {
 			llm.ChatGPTWithSocksProxy(cfg.LLM.ChatGPT.SocksProxy),
 		)
 	default:
-		fmt.Printf("Неизвестный провайдер LLM: %s\n", cfg.LLM.ActiveProvider)
+		fmt.Printf("Unknown LLM provider: %s\n", cfg.LLM.Provider)
 		os.Exit(1)
 	}
+
 	if err != nil {
-		fmt.Printf("Ошибка создания клиента LLM: %v\n", err)
+		fmt.Printf("Error creating LLM client: %v\n", err)
 		os.Exit(1)
 	}
 
@@ -70,35 +61,30 @@ func main() {
 		authHandler       = handler.Auth(myGeneticsHandler)
 	)
 
-	// Инициализируем хранилище истории.
-	var historyStorage server.ChatHistoryReadWriter
-	switch cfg.Storage.History.Type {
-	case "file":
-		historyStorage, err = history.NewFileStorage(cfg.Storage.History.Path)
-	case "memory":
-		historyStorage = history.NewInMemory()
-	default:
-		fmt.Printf("Неизвестный тип хранилища истории: %s\n", cfg.Storage.History.Type)
-		os.Exit(1)
-	}
-	if err != nil {
-		fmt.Printf("Ошибка создания хранилища истории: %v\n", err)
-		os.Exit(1)
-	}
+	var (
+		historyStorage server.ChatHistoryReadWriter
+		userStorage    server.UserStorage
+	)
+	switch cfg.Storage.Type {
+	case config.TypeFS:
+		historyStorage, err = history.NewFileStorage(cfg.Storage.Filesystem.Path)
+		if err != nil {
+			fmt.Printf("Error creating history storage: %v\n", err)
+			os.Exit(1)
+		}
 
-	// Инициализируем хранилище пользователей.
-	var userStorage server.UserStorage
-	switch cfg.Storage.Users.Type {
-	case "file":
-		userStorage, err = user.NewFileStorage(cfg.Storage.Users.Path)
-	case "memory":
+		userStorage, err = user.NewFileStorage(cfg.Storage.Filesystem.Path)
+		if err != nil {
+			fmt.Printf("Error creating user storage: %v\n", err)
+			os.Exit(1)
+		}
+
+	case config.TypeInMemory:
+		historyStorage = history.NewInMemory()
 		userStorage = user.NewInMemory()
+
 	default:
-		fmt.Printf("Неизвестный тип хранилища пользователей: %s\n", cfg.Storage.Users.Type)
-		os.Exit(1)
-	}
-	if err != nil {
-		fmt.Printf("Ошибка создания хранилища пользователей: %v\n", err)
+		fmt.Printf("Unknown storage type: %s\n", cfg.Storage.Type)
 		os.Exit(1)
 	}
 
@@ -128,7 +114,7 @@ func main() {
 
 	// Запускаем сервер.
 	if err := srv.ListenAndServe(ctx); err != nil {
-		fmt.Printf("Ошибка сервера: %v\n", err)
+		fmt.Printf("Error starting server: %v\n", err)
 		os.Exit(1)
 	}
 }
