@@ -1,27 +1,29 @@
-# Bot configuration example
-# Environment variables are supported using ${VAR_NAME} syntax
+# Bot configuration example.
+#
+# Environment variables are supported using ${VAR_NAME} syntax.
 # Example usage:
 #   export BOT_TOKEN="your-telegram-bot-token"
 #   export OPENAI_KEY="your-openai-api-key"
 #   export PG_PASSWORD="your-database-password"
 
-# Telegram bot settings
+# Telegram bot settings.
 telegram:
   token: ${BOT_TOKEN}
   debug: false
 
-# Storage configuration
+# Storage configuration.
 storage:
   type: postgresql
   postgresql:
     host: localhost
     port: 5432
-    user: postgres
+    user: health_gpt
     password: ${PG_PASSWORD}
-    database: bot_db
+    database: health_gpt
     ssl_mode: disable
+    migration: true
 
-# LLM provider settings
+# LLM provider settings.
 llm:
   provider: chatgpt
   chatgpt:

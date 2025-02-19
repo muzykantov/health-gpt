@@ -8,14 +8,14 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// Bot represents the main configuration structure
+// Bot represents the main configuration structure.
 type Bot struct {
 	Telegram `yaml:"telegram"`
 	Storage  `yaml:"storage"`
 	LLM      `yaml:"llm"`
 }
 
-// Read parses configuration from reader in YAML format
+// Read parses configuration from reader in YAML format.
 func Read(r io.Reader) (*Bot, error) {
 	raw, err := io.ReadAll(r)
 	if err != nil {
@@ -31,7 +31,7 @@ func Read(r io.Reader) (*Bot, error) {
 	return &cfg, nil
 }
 
-// FromFile reads configuration from file
+// FromFile reads configuration from file.
 func FromFile(path string) (*Bot, error) {
 	f, err := os.Open(path)
 	if err != nil {

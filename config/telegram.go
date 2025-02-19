@@ -2,6 +2,6 @@ package config
 
 // Telegram defines Telegram bot configuration.
 type Telegram struct {
-	Token string `yaml:"token" validate:"required,len=46"`
+	Token string `yaml:"token"`
 	Debug bool   `yaml:"debug"`
 }

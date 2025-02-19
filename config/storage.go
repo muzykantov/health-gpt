@@ -2,10 +2,10 @@ package config
 
 // Storage defines bot data storage configuration.
 type Storage struct {
-	Type `yaml:"type" validate:"required,oneof=postgresql fs in-memory"`
+	Type `yaml:"type"`
 
-	Postgresql `yaml:"postgresql" validate:"required_if=Type postgresql"`
-	Filesystem `yaml:"filesystem" validate:"required_if=Type fs"`
+	PostgreSQL `yaml:"postgresql"`
+	Filesystem `yaml:"filesystem"`
 }
 
 // Type defines supported storage types.
@@ -17,17 +17,18 @@ const (
 	TypeInMemory   Type = "in-memory"
 )
 
-// Postgresql configuration for PostgreSQL storage.
-type Postgresql struct {
-	Host     string `yaml:"host" validate:"required"`
-	Port     int    `yaml:"port" validate:"required,min=1,max=65535"`
-	User     string `yaml:"user" validate:"required"`
-	Password string `yaml:"password" validate:"required"`
-	Database string `yaml:"database" validate:"required"`
-	SSLMode  string `yaml:"ssl_mode" validate:"omitempty,oneof=disable require verify-ca verify-full"`
+// PostgreSQL configuration for PostgreSQL storage.
+type PostgreSQL struct {
+	Host      string `yaml:"host"`
+	Port      int    `yaml:"port"`
+	User      string `yaml:"user"`
+	Password  string `yaml:"password"`
+	Database  string `yaml:"database"`
+	SSLMode   string `yaml:"ssl_mode"`
+	Migration bool   `yaml:"migration"`
 }
 
 // Filesystem configuration for file-based storage.
 type Filesystem struct {
-	Path string `yaml:"path" validate:"required,dir"`
+	Path string `yaml:"path"`
 }

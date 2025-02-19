@@ -6,7 +6,7 @@ services:
     container_name: health-gpt-bot
     restart: unless-stopped
     volumes:
-      - ./config.json:/app/config.json:ro
+      - ./config.yaml:/app/config.yaml:ro
       - ./data:/app/data
     environment:
       - TZ=Europe/Moscow

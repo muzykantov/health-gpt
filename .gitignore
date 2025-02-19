@@ -1,4 +1,4 @@
-# Бинарные файлы и директории
+# Binary files and directories
 bin/
 *.exe
 *.exe~
@@ -6,65 +6,64 @@ bin/
 *.so
 *.dylib
 
-# Тестовые бинарные файлы
+# Test binary files
 *.test
 
-# Файлы покрытия кода
+# Code coverage files
 *.out
 coverage.html
 
-# Временные файлы IDE
+# Temporary IDE files
 .idea/
 .vscode/
 *.swp
 *.swo
 .DS_Store
 /.env
-/config.yaml
-/config.json
 
-# Зависимости и кэш
+# Dependencies and cache
 /vendor/
 .vendor-new/
 go.work
 go.work.sum
 
-# Локальные файлы конфигурации
+# Local configuration files
 *.local.yaml
 *.local.yml
 *.local.json
 .env.local
+config.yaml
 
-# Директории сборки и отладки
+# Build and debug directories
 debug/
 _debug/
 debug.test
 /dist/
 data/
 
-# Временные файлы
+# Temporary files
 tmp/
 temp/
 *.tmp
 
-# Логи
+# Logs
 *.log
 logs/
 
-# Air - инструмент для живой перезагрузки
+# Air - live reload tool
 tmp/
 .air.toml
 
-# Файлы профилирования
+# Profiling files
 *.prof
 *.pprof
 *.trace
 
-# Специфичные для macOS файлы
+# macOS specific files
 .DS_Store
 .AppleDouble
 .LSOverride
 
-# Специфичные для Windows файлы
+# Windows specific files
 Thumbs.db
 Desktop.ini
