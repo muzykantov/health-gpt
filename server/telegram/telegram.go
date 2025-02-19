@@ -75,7 +75,7 @@ func (t *Server) ListenAndServe(ctx context.Context) error {
 
 	unsupported := func(chatID int64) {
 		if t.UnsupportedResponse != nil {
-			if err := SendTelegramMessage(
+			if err := SendMessage(
 				bot,
 				chatID,
 				t.UnsupportedResponse(),
@@ -217,55 +217,6 @@ func (t *Server) ListenAndServe(ctx context.Context) error {
 	}
 }
 
-// SendTelegramMessage отправляет сообщение через Telegram API.
-func SendTelegramMessage(sender *tgbotapi.BotAPI, chatID int64, m chat.Message) (err error) {
-	if m.IsEmpty() {
-		return nil
-	}
-
-	switch msgContent := m.Content.(type) {
-	case string:
-		msg := tgbotapi.NewMessage(chatID, msgContent)
-		msg.ParseMode = tgbotapi.ModeHTML
-
-		_, err = sender.Send(msg)
-
-	case content.Select:
-		var buttons = make([][]tgbotapi.InlineKeyboardButton, 0, len(msgContent.Items))
-		for _, item := range msgContent.Items {
-			buttons = append(
-				buttons,
-				tgbotapi.NewInlineKeyboardRow(
-					tgbotapi.NewInlineKeyboardButtonData(item.Caption, item.Data),
-				),
-			)
-		}
-
-		msg := tgbotapi.NewMessage(chatID, msgContent.Header)
-		msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(buttons...)
-
-		_, err = sender.Send(msg)
-
-	case content.Commands:
-		commands := make([]tgbotapi.BotCommand, 0, len(msgContent.Items))
-		for _, item := range msgContent.Items {
-			commands = append(commands, tgbotapi.BotCommand{
-				Command:     item.Name,
-				Description: item.Description,
-			})
-		}
-
-		cmd := tgbotapi.NewSetMyCommands(commands...)
-
-		_, err = sender.Request(cmd)
-
-	default:
-		err = ErrTelegramUnsupportedMessageType
-	}
-
-	return
-}
-
 // telegramResponseWriter адаптирует отправку сообщений к интерфейсу ResponseWriter.
 type telegramResponseWriter struct {
 	chatID   int64
@@ -273,13 +224,13 @@ type telegramResponseWriter struct {
 	errorLog *log.Logger
 }
 
-func (trw *telegramResponseWriter) WriteResponse(m chat.Message) error {
+func (w *telegramResponseWriter) WriteResponse(m chat.Message) error {
 	if m.IsEmpty() {
 		return nil
 	}
 
-	if err := SendTelegramMessage(trw.sender, trw.chatID, m); err != nil {
-		trw.errorLog.Printf("failed to send message to chatID %d: %v", trw.chatID, err)
+	if err := SendMessage(w.sender, w.chatID, m); err != nil {
+		w.errorLog.Printf("failed to send message to chatID %d: %v", w.chatID, err)
 		return err
 	}
 

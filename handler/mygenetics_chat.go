@@ -3,8 +3,10 @@ package handler
 import (
 	"context"
 	_ "embed"
+	"time"
 
 	"github.com/muzykantov/health-gpt/chat"
+	"github.com/muzykantov/health-gpt/chat/content"
 	"github.com/muzykantov/health-gpt/mygenetics"
 	"github.com/muzykantov/health-gpt/server"
 )
@@ -49,7 +51,7 @@ func myGeneticsChat() server.Handler {
 				}
 			}
 
-			w.WriteResponse(chat.MsgA("🔍 Загружаю ваши анализы..."))
+			// w.WriteResponse(chat.MsgA("🔍 Загружаю ваши анализы..."))
 
 			codelabs, err := mygenetics.DefaultClient.FetchCodelabs(ctx, access)
 			if err != nil {
@@ -90,7 +92,20 @@ func myGeneticsChat() server.Handler {
 			msgs = append(msgs, filteredHistory...)
 			msgs = append(msgs, chat.MsgU(msgText))
 
-			w.WriteResponse(chat.MsgA("🤔 Анализирую ваш вопрос..."))
+			// w.WriteResponse(chat.MsgA("🤔 Анализирую ваш вопрос..."))
+
+			done := make(chan struct{})
+			go func() {
+				ticker := time.NewTicker(time.Second)
+				for {
+					select {
+					case <-ticker.C:
+						w.WriteResponse(chat.MsgA(content.Typing{}))
+					case <-done:
+						return
+					}
+				}
+			}()
 
 			response, err := r.Completer.CompleteChat(ctx, msgs)
 			if err != nil {
@@ -99,6 +114,8 @@ func myGeneticsChat() server.Handler {
 				r.ErrorLog.Printf("failed to complete chat (chatID: %d): %v", r.ChatID, err)
 				return
 			}
+
+			done <- struct{}{}
 
 			// Сохраняем всю историю плюс новые сообщения
 			newHistory := make([]chat.Message, len(history)+2)
