@@ -4,7 +4,7 @@
 # Example usage:
 #   export BOT_TOKEN="your-telegram-bot-token"
 #   export OPENAI_KEY="your-openai-api-key"
-#   export PG_PASSWORD="your-database-password"
+#   export REDIS_PASSWORD="your-redis-password"
 
 # Telegram bot settings.
 telegram:
@@ -13,15 +13,12 @@ telegram:
 
 # Storage configuration.
 storage:
-  type: postgresql
-  postgresql:
-    host: localhost
-    port: 5432
-    user: health_gpt
-    password: ${PG_PASSWORD}
-    database: health_gpt
-    ssl_mode: disable
-    migration: true
+  type: redis
+  redis:
+    address: localhost:6379
+    password: ${REDIS_PASSWORD}
+    db: 0
+    expiration: 720h # TTL (0 - infinite)
 
 # LLM provider settings.
 llm:

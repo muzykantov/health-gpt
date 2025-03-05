@@ -4,31 +4,27 @@ package config
 type Storage struct {
 	Type `yaml:"type"`
 
-	PostgreSQL `yaml:"postgresql"`
 	Filesystem `yaml:"filesystem"`
+	Redis      `yaml:"redis"`
 }
 
 // Type defines supported storage types.
 type Type string
 
 const (
-	TypePostgreSQL Type = "postgresql"
-	TypeFS         Type = "fs"
-	TypeInMemory   Type = "in-memory"
+	TypeFS    Type = "fs"
+	TypeRedis Type = "redis"
 )
-
-// PostgreSQL configuration for PostgreSQL storage.
-type PostgreSQL struct {
-	Host      string `yaml:"host"`
-	Port      int    `yaml:"port"`
-	User      string `yaml:"user"`
-	Password  string `yaml:"password"`
-	Database  string `yaml:"database"`
-	SSLMode   string `yaml:"ssl_mode"`
-	Migration bool   `yaml:"migration"`
-}
 
 // Filesystem configuration for file-based storage.
 type Filesystem struct {
 	Path string `yaml:"path"`
+}
+
+// Redis configuration for Redis storage.
+type Redis struct {
+	Address    string `yaml:"address"`
+	Password   string `yaml:"password"`
+	DB         int    `yaml:"db"`
+	Expiration string `yaml:"expiration"`
 }
