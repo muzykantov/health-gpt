@@ -27,8 +27,7 @@ type Server struct {
 	Token               string
 	Handler             server.Handler
 	Completion          server.ChatCompleter
-	History             server.ChatHistoryReadWriter
-	User                server.UserStorage
+	Storage             server.DataStorage
 	Debug               bool
 	UnsupportedResponse func() chat.Message
 	ErrorLog            *log.Logger
@@ -52,14 +51,9 @@ func (t *Server) ListenAndServe(ctx context.Context) error {
 		}
 	}
 
-	chatHistory := t.History
-	if chatHistory == nil {
-		chatHistory = &unimplementedChatHistoryReadWriter{}
-	}
-
-	userManager := t.User
-	if userManager == nil {
-		userManager = &unimplementedUserManager{}
+	dataStorage := t.Storage
+	if dataStorage == nil {
+		dataStorage = &unimplementedDataStorage{}
 	}
 
 	errorLog := t.ErrorLog
@@ -173,7 +167,7 @@ func (t *Server) ListenAndServe(ctx context.Context) error {
 				continue
 			}
 
-			from, err := userManager.GetUser(ctx, sender.ID)
+			from, err := dataStorage.GetUser(ctx, sender.ID)
 			if err != nil {
 				if !errors.Is(err, storage.ErrUserNotFound) {
 					errorLog.Printf("failed to get user: %v", err)
@@ -208,8 +202,7 @@ func (t *Server) ListenAndServe(ctx context.Context) error {
 						From:     from,
 
 						Completer: chatCompletion,
-						History:   chatHistory,
-						User:      userManager,
+						Storage:   dataStorage,
 						ErrorLog:  errorLog,
 					})
 			}()
@@ -237,10 +230,10 @@ func (w *telegramResponseWriter) WriteResponse(m chat.Message) error {
 	return nil
 }
 
-// unimplementedChatHistoryReadWriter предоставляет пустую реализацию интерфейса истории.
-type unimplementedChatHistoryReadWriter struct{}
+// unimplementedDataStorage предоставляет пустую реализацию интерфейса истории.
+type unimplementedDataStorage struct{}
 
-func (unimplementedChatHistoryReadWriter) ReadChatHistory(
+func (unimplementedDataStorage) GetChatHistory(
 	ctx context.Context,
 	chatID int64,
 	limit uint64,
@@ -248,7 +241,7 @@ func (unimplementedChatHistoryReadWriter) ReadChatHistory(
 	return make([]chat.Message, 0), nil
 }
 
-func (unimplementedChatHistoryReadWriter) WriteChatHistory(
+func (unimplementedDataStorage) SaveChatHistory(
 	ctx context.Context,
 	chatID int64,
 	msgs []chat.Message,
@@ -256,13 +249,10 @@ func (unimplementedChatHistoryReadWriter) WriteChatHistory(
 	return nil
 }
 
-// unimplementedUserManager предоставляет пустую реализацию интерфейса менеджера пользователей.
-type unimplementedUserManager struct{}
-
-func (unimplementedUserManager) SaveUser(ctx context.Context, user chat.User) error {
-	return nil
+func (unimplementedDataStorage) GetUser(ctx context.Context, userID int64) (chat.User, error) {
+	return chat.User{}, errors.New("user not found")
 }
 
-func (unimplementedUserManager) GetUser(ctx context.Context, userID int64) (chat.User, error) {
-	return chat.User{}, errors.New("user not found")
+func (unimplementedDataStorage) SaveUser(ctx context.Context, user chat.User) error {
+	return nil
 }

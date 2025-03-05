@@ -7,21 +7,27 @@ import (
 	"github.com/muzykantov/health-gpt/chat"
 )
 
-// ChatHistoryReadWriter объединяет чтение и запись истории диалога.
-type ChatHistoryReadWriter interface {
-	ReadChatHistory(ctx context.Context, chatID int64, limit uint64) ([]chat.Message, error)
-	WriteChatHistory(ctx context.Context, chatID int64, msgs []chat.Message) error
-}
-
 // ChatCompleter генерирует ответы с помощью языковой модели.
 type ChatCompleter interface {
 	CompleteChat(ctx context.Context, msgs []chat.Message) (chat.Message, error)
 }
 
+// ChatHistoryStorage объединяет чтение и запись истории диалога.
+type ChatHistoryStorage interface {
+	GetChatHistory(ctx context.Context, chatID int64, limit uint64) ([]chat.Message, error)
+	SaveChatHistory(ctx context.Context, chatID int64, msgs []chat.Message) error
+}
+
 // UserStorage хранит информацию о пользователях.
 type UserStorage interface {
-	SaveUser(ctx context.Context, user chat.User) error
 	GetUser(ctx context.Context, userID int64) (chat.User, error)
+	SaveUser(ctx context.Context, user chat.User) error
+}
+
+// Storage отвечает за получение и хранение данных.
+type DataStorage interface {
+	ChatHistoryStorage
+	UserStorage
 }
 
 // Request содержит входящее сообщение и сервисы для его обработки.
@@ -30,9 +36,8 @@ type Request struct {
 	Incoming chat.Message // Входящее сообщение.
 	From     chat.User    // Пользователь, отправивший входящее сообщение.
 
-	Completer ChatCompleter         // Сервис генерации ответов.
-	History   ChatHistoryReadWriter // Сервис чтения и записи истории диалога.
-	User      UserStorage           // Сервис управления пользователями.
+	Completer ChatCompleter // Сервис генерации ответов.
+	Storage   DataStorage
 
 	ErrorLog *log.Logger // Сервис логирования ошибок
 }

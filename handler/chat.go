@@ -16,7 +16,7 @@ func Chat() server.Handler {
 				return
 			}
 
-			history, err := r.History.ReadChatHistory(ctx, r.ChatID, 10)
+			history, err := r.Storage.GetChatHistory(ctx, r.ChatID, 10)
 			if err != nil {
 				w.WriteResponse(
 					chat.NewMessage(
@@ -52,7 +52,7 @@ func Chat() server.Handler {
 
 			history = append(history, response)
 
-			if err := r.History.WriteChatHistory(ctx, r.ChatID, history); err != nil {
+			if err := r.Storage.SaveChatHistory(ctx, r.ChatID, history); err != nil {
 				w.WriteResponse(
 					chat.NewMessage(
 						chat.RoleAssistant,

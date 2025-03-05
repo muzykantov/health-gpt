@@ -36,7 +36,7 @@ func Auth(next server.Handler) server.Handler {
 					return
 				}
 
-				if err := r.User.SaveUser(ctx, r.From); err != nil {
+				if err := r.Storage.SaveUser(ctx, r.From); err != nil {
 					w.WriteResponse(chat.MsgAf("⛔ Ошибка обновления информации о пользователе: %v", err))
 					return
 				}
@@ -46,7 +46,7 @@ func Auth(next server.Handler) server.Handler {
 			}
 
 			// Если пользователь ешё не ввел email и пароль, то читаем историю чата.
-			msgs, err := r.History.ReadChatHistory(ctx, r.ChatID, 0)
+			msgs, err := r.Storage.GetChatHistory(ctx, r.ChatID, 0)
 			if err != nil {
 				w.WriteResponse(chat.MsgAf("⛔ Ошибка получения истории чата: %v", err))
 				return
@@ -77,7 +77,7 @@ func Auth(next server.Handler) server.Handler {
 			if !json.Valid([]byte(response.Content.(string))) {
 				msgs = append(msgs, response)
 
-				if err := r.History.WriteChatHistory(ctx, r.ChatID, msgs); err != nil {
+				if err := r.Storage.SaveChatHistory(ctx, r.ChatID, msgs); err != nil {
 					w.WriteResponse(chat.MsgAf("⛔ Ошибка сохранения истории чата: %v", err))
 					return
 				}
@@ -111,7 +111,7 @@ func Auth(next server.Handler) server.Handler {
 					chat.MsgA("❌ Имя пользователя или пароль не подходят. Попробуйте ещё раз."),
 				)
 
-				if err := r.History.WriteChatHistory(
+				if err := r.Storage.SaveChatHistory(
 					ctx,
 					r.ChatID,
 					make([]chat.Message, 0),
@@ -126,13 +126,13 @@ func Auth(next server.Handler) server.Handler {
 			r.From.Password = credentials.Password
 			r.From.Tokens = tokens
 			r.From.State = chat.UserStateAuthorized
-			if err := r.User.SaveUser(ctx, r.From); err != nil {
+			if err := r.Storage.SaveUser(ctx, r.From); err != nil {
 				w.WriteResponse(chat.MsgAf("⛔ Ошибка сохранения пользователя: %v", err))
 				return
 			}
 
 			// Сбрасываем переписку.
-			if err := r.History.WriteChatHistory(
+			if err := r.Storage.SaveChatHistory(
 				ctx,
 				r.ChatID,
 				make([]chat.Message, 0),

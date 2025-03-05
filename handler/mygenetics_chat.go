@@ -35,7 +35,7 @@ func myGeneticsChat() server.Handler {
 				return
 			}
 
-			history, err := r.History.ReadChatHistory(ctx, r.ChatID, 100)
+			history, err := r.Storage.GetChatHistory(ctx, r.ChatID, 100)
 			if err != nil {
 				w.WriteResponse(chat.MsgAf("⚠️ Ошибка получения истории чата: %v", err))
 				r.ErrorLog.Printf("failed to read chat history (chatID: %d): %v", r.ChatID, err)
@@ -123,7 +123,7 @@ func myGeneticsChat() server.Handler {
 			newHistory[len(history)] = chat.MsgU(msgText)
 			newHistory[len(history)+1] = chat.MsgA(response.Content)
 
-			if err := r.History.WriteChatHistory(ctx, r.ChatID, newHistory); err != nil {
+			if err := r.Storage.SaveChatHistory(ctx, r.ChatID, newHistory); err != nil {
 				w.WriteResponse(chat.MsgAf("⚠️ Ошибка сохранения истории чата: %v", err))
 				r.ErrorLog.Printf("failed to write chat history (chatID: %d): %v", r.ChatID, err)
 				return

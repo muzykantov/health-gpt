@@ -61,20 +61,14 @@ func main() {
 		authHandler       = handler.Auth(myGeneticsHandler)
 	)
 
-	var (
-		historyStorage server.ChatHistoryReadWriter
-		userStorage    server.UserStorage
-	)
+	var dataStorage server.DataStorage
 	switch cfg.Storage.Type {
 	case config.TypeFS:
-		fs, err := storage.NewFile(cfg.Storage.Filesystem.Path)
+		dataStorage, err = storage.NewFile(cfg.Storage.Filesystem.Path)
 		if err != nil {
 			fmt.Printf("Error creating file storage: %v\n", err)
 			os.Exit(1)
 		}
-
-		historyStorage = fs
-		userStorage = fs
 
 	default:
 		fmt.Printf("Unknown storage type: %s\n", cfg.Storage.Type)
@@ -90,8 +84,7 @@ func main() {
 		Token:               cfg.Telegram.Token,
 		Handler:             authHandler,
 		Completion:          ai,
-		History:             historyStorage,
-		User:                userStorage,
+		Storage:             dataStorage,
 		Debug:               cfg.Telegram.Debug,
 		UnsupportedResponse: unsupported,
 		ErrorLog:            log.Default(),

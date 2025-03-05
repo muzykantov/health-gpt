@@ -25,8 +25,8 @@ func NewFile(dir string) (*File, error) {
 	return &File{dir: dir}, nil
 }
 
-// ReadChatHistory читает историю сообщений из файла.
-func (f *File) ReadChatHistory(
+// GetChatHistory читает историю сообщений из файла.
+func (f *File) GetChatHistory(
 	ctx context.Context,
 	chatID int64,
 	limit uint64,
@@ -53,8 +53,8 @@ func (f *File) ReadChatHistory(
 	return msgs[uint64(len(msgs))-limit:], nil
 }
 
-// WriteChatHistory записывает историю сообщений в файл.
-func (f *File) WriteChatHistory(
+// SaveChatHistory записывает историю сообщений в файл.
+func (f *File) SaveChatHistory(
 	ctx context.Context,
 	chatID int64,
 	msgs []chat.Message,
@@ -76,19 +76,6 @@ func (f *File) WriteChatHistory(
 	return os.WriteFile(f.historyPath(chatID), data, 0644)
 }
 
-// SaveUser сохраняет пользователя в файл.
-func (f *File) SaveUser(ctx context.Context, user chat.User) error {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-
-	data, err := json.MarshalIndent(user, "", "    ")
-	if err != nil {
-		return err
-	}
-
-	return os.WriteFile(f.userPath(user.ID), data, 0644)
-}
-
 // GetUser возвращает пользователя из файла по его ID.
 func (f *File) GetUser(ctx context.Context, userID int64) (chat.User, error) {
 	f.mu.RLock()
@@ -108,6 +95,19 @@ func (f *File) GetUser(ctx context.Context, userID int64) (chat.User, error) {
 	}
 
 	return user, nil
+}
+
+// SaveUser сохраняет пользователя в файл.
+func (f *File) SaveUser(ctx context.Context, user chat.User) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
+	data, err := json.MarshalIndent(user, "", "    ")
+	if err != nil {
+		return err
+	}
+
+	return os.WriteFile(f.userPath(user.ID), data, 0644)
 }
 
 // historyPath возвращает путь к файлу истории чата.
