@@ -33,6 +33,7 @@ llm:
     top_p: 1.0
     max_tokens: 2000
     socks_proxy: socks5://localhost:1080
+    base_url: https://api.openai.com
 
 # Alternative LLM configuration examples:
 #

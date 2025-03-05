@@ -39,11 +39,12 @@ func main() {
 	case config.ProviderChatGPT:
 		ai, err = llm.NewChatGPT(
 			cfg.LLM.ChatGPT.APIKey,
-			llm.ChatGPTWithTemperature(float32(cfg.LLM.ChatGPT.Temperature)),
+			llm.ChatGPTWithTemperature(cfg.LLM.ChatGPT.Temperature),
 			llm.ChatGPTWithModel(cfg.LLM.ChatGPT.Model),
-			llm.ChatGPTWithTopP(float32(cfg.LLM.ChatGPT.TopP)),
+			llm.ChatGPTWithTopP(cfg.LLM.ChatGPT.TopP),
 			llm.ChatGPTWithMaxTokens(cfg.LLM.ChatGPT.MaxTokens),
 			llm.ChatGPTWithSocksProxy(cfg.LLM.ChatGPT.SocksProxy),
+			llm.ChatGPTWithBaseURL(cfg.LLM.ChatGPT.BaseURL),
 		)
 	default:
 		fmt.Printf("Unknown LLM provider: %s\n", cfg.LLM.Provider)

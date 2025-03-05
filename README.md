@@ -10,10 +10,10 @@
 
 ## 🛠️ Необходимое ПО
 
-- Go 1.23 или выше
+- Go 1.24 или выше
 - Docker и Docker Compose
 - Токен Telegram Bot
-- Учетные данные сервисов ИИ (GigaChat/ChatGPT)
+- Учетные данные сервисов ИИ (ChatGPT/DeepSeek)
 - Учетные данные API MyGenetics (для тестов)
 
 ## ⚙️ Конфигурация
@@ -59,10 +59,6 @@ go build -o health-bot ./cmd/bot
 # Для тестов ChatGPT
 export OPENAI_API_KEY=your_api_key
 export OPENAI_SOCKS_PROXY=socks5://user:pass@host:port  # опционально
-
-# Для тестов GigaChat
-export GIGACHAT_CLIENT_ID=your_client_id
-export GIGACHAT_CLIENT_SECRET=your_client_secret
 
 # Для тестов MyGenetics
 export MYGENETICS_EMAIL=your_email
