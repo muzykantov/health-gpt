@@ -10,8 +10,7 @@ import (
 	"syscall"
 
 	"github.com/muzykantov/health-gpt/chat"
-	"github.com/muzykantov/health-gpt/chat/history"
-	"github.com/muzykantov/health-gpt/chat/user"
+	"github.com/muzykantov/health-gpt/chat/storage"
 	"github.com/muzykantov/health-gpt/config"
 	"github.com/muzykantov/health-gpt/handler"
 	"github.com/muzykantov/health-gpt/llm"
@@ -68,21 +67,14 @@ func main() {
 	)
 	switch cfg.Storage.Type {
 	case config.TypeFS:
-		historyStorage, err = history.NewFileStorage(cfg.Storage.Filesystem.Path)
+		fs, err := storage.NewFile(cfg.Storage.Filesystem.Path)
 		if err != nil {
-			fmt.Printf("Error creating history storage: %v\n", err)
+			fmt.Printf("Error creating file storage: %v\n", err)
 			os.Exit(1)
 		}
 
-		userStorage, err = user.NewFileStorage(cfg.Storage.Filesystem.Path)
-		if err != nil {
-			fmt.Printf("Error creating user storage: %v\n", err)
-			os.Exit(1)
-		}
-
-	case config.TypeInMemory:
-		historyStorage = history.NewInMemory()
-		userStorage = user.NewInMemory()
+		historyStorage = fs
+		userStorage = fs
 
 	default:
 		fmt.Printf("Unknown storage type: %s\n", cfg.Storage.Type)

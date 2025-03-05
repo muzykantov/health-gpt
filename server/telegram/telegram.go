@@ -9,7 +9,7 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/muzykantov/health-gpt/chat"
 	"github.com/muzykantov/health-gpt/chat/content"
-	"github.com/muzykantov/health-gpt/chat/user"
+	"github.com/muzykantov/health-gpt/chat/storage"
 	"github.com/muzykantov/health-gpt/llm"
 	"github.com/muzykantov/health-gpt/server"
 )
@@ -175,7 +175,7 @@ func (t *Server) ListenAndServe(ctx context.Context) error {
 
 			from, err := userManager.GetUser(ctx, sender.ID)
 			if err != nil {
-				if !errors.Is(err, user.ErrUserNotFound) {
+				if !errors.Is(err, storage.ErrUserNotFound) {
 					errorLog.Printf("failed to get user: %v", err)
 					continue
 				}

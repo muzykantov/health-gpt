@@ -14,6 +14,7 @@ type Provider string
 const (
 	ProviderChatGPT  Provider = "chatgpt"
 	ProviderClaudeAI Provider = "claude"
+	ProviderDeepSeek Provider = "deepseek"
 )
 
 // ChatGPT configuration for OpenAI GPT models.

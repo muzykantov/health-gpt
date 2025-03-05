@@ -62,7 +62,3 @@ llm:
 #   type: fs
 #   filesystem:
 #     path: ./data
-#
-# In-memory:
-# storage:
-#   type: in-memory
