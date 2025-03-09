@@ -64,9 +64,16 @@ func main() {
 	var dataStorage server.DataStorage
 	switch cfg.Storage.Type {
 	case config.TypeFS:
-		dataStorage, err = storage.NewFile(cfg.Storage.Filesystem.Path)
+		dataStorage, err = storage.NewFS(cfg.Storage.Filesystem.Dir)
 		if err != nil {
 			fmt.Printf("Error creating file storage: %v\n", err)
+			os.Exit(1)
+		}
+
+	case config.TypeBolt:
+		dataStorage, err = storage.NewBolt(cfg.Storage.Bolt.Path)
+		if err != nil {
+			fmt.Printf("Error creating bolt db storage: %v\n", err)
 			os.Exit(1)
 		}
 

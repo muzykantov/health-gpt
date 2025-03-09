@@ -11,30 +11,30 @@ import (
 	"github.com/muzykantov/health-gpt/chat"
 )
 
-// File реализует потокобезопасное хранение в файлах.
-type File struct {
+// FS реализует потокобезопасное хранение в файлах.
+type FS struct {
 	mu  sync.RWMutex
 	dir string
 }
 
-// NewFile создает новое файловое хранилище.
-func NewFile(dir string) (*File, error) {
+// NewFS создает новое файловое хранилище.
+func NewFS(dir string) (*FS, error) {
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return nil, err
 	}
-	return &File{dir: dir}, nil
+	return &FS{dir: dir}, nil
 }
 
 // GetChatHistory читает историю сообщений из файла.
-func (f *File) GetChatHistory(
+func (fs *FS) GetChatHistory(
 	ctx context.Context,
 	chatID int64,
 	limit uint64,
 ) ([]chat.Message, error) {
-	f.mu.RLock()
-	defer f.mu.RUnlock()
+	fs.mu.RLock()
+	defer fs.mu.RUnlock()
 
-	data, err := os.ReadFile(f.historyPath(chatID))
+	data, err := os.ReadFile(fs.historyPath(chatID))
 	if os.IsNotExist(err) {
 		return []chat.Message{}, nil
 	}
@@ -54,13 +54,13 @@ func (f *File) GetChatHistory(
 }
 
 // SaveChatHistory записывает историю сообщений в файл.
-func (f *File) SaveChatHistory(
+func (fs *FS) SaveChatHistory(
 	ctx context.Context,
 	chatID int64,
 	msgs []chat.Message,
 ) error {
-	f.mu.Lock()
-	defer f.mu.Unlock()
+	fs.mu.Lock()
+	defer fs.mu.Unlock()
 
 	for _, msg := range msgs {
 		if _, ok := msg.Content.(string); !ok {
@@ -73,15 +73,15 @@ func (f *File) SaveChatHistory(
 		return err
 	}
 
-	return os.WriteFile(f.historyPath(chatID), data, 0644)
+	return os.WriteFile(fs.historyPath(chatID), data, 0644)
 }
 
 // GetUser возвращает пользователя из файла по его ID.
-func (f *File) GetUser(ctx context.Context, userID int64) (chat.User, error) {
-	f.mu.RLock()
-	defer f.mu.RUnlock()
+func (fs *FS) GetUser(ctx context.Context, userID int64) (chat.User, error) {
+	fs.mu.RLock()
+	defer fs.mu.RUnlock()
 
-	data, err := os.ReadFile(f.userPath(userID))
+	data, err := os.ReadFile(fs.userPath(userID))
 	if os.IsNotExist(err) {
 		return chat.User{}, ErrUserNotFound
 	}
@@ -98,24 +98,24 @@ func (f *File) GetUser(ctx context.Context, userID int64) (chat.User, error) {
 }
 
 // SaveUser сохраняет пользователя в файл.
-func (f *File) SaveUser(ctx context.Context, user chat.User) error {
-	f.mu.Lock()
-	defer f.mu.Unlock()
+func (fs *FS) SaveUser(ctx context.Context, user chat.User) error {
+	fs.mu.Lock()
+	defer fs.mu.Unlock()
 
 	data, err := json.MarshalIndent(user, "", "    ")
 	if err != nil {
 		return err
 	}
 
-	return os.WriteFile(f.userPath(user.ID), data, 0644)
+	return os.WriteFile(fs.userPath(user.ID), data, 0644)
 }
 
 // historyPath возвращает путь к файлу истории чата.
-func (f *File) historyPath(chatID int64) string {
-	return filepath.Join(f.dir, fmt.Sprintf("chat_%d.json", chatID))
+func (fs *FS) historyPath(chatID int64) string {
+	return filepath.Join(fs.dir, fmt.Sprintf("chat_%d.json", chatID))
 }
 
 // userPath возвращает путь к файлу пользователя.
-func (f *File) userPath(userID int64) string {
-	return filepath.Join(f.dir, fmt.Sprintf("user_%d.json", userID))
+func (fs *FS) userPath(userID int64) string {
+	return filepath.Join(fs.dir, fmt.Sprintf("user_%d.json", userID))
 }

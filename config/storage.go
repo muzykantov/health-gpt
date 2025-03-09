@@ -5,26 +5,23 @@ type Storage struct {
 	Type `yaml:"type"`
 
 	Filesystem `yaml:"filesystem"`
-	Redis      `yaml:"redis"`
+	Bolt       `yaml:"bolt"`
 }
 
 // Type defines supported storage types.
 type Type string
 
 const (
-	TypeFS    Type = "fs"
-	TypeRedis Type = "redis"
+	TypeFS   Type = "fs"
+	TypeBolt Type = "bolt"
 )
 
 // Filesystem configuration for file-based storage.
 type Filesystem struct {
-	Path string `yaml:"path"`
+	Dir string `yaml:"dir"`
 }
 
-// Redis configuration for Redis storage.
-type Redis struct {
-	Address    string `yaml:"address"`
-	Password   string `yaml:"password"`
-	DB         int    `yaml:"db"`
-	Expiration string `yaml:"expiration"`
+// Bolt configuration for BoltDB storage.
+type Bolt struct {
+	Path string `yaml:"path"`
 }

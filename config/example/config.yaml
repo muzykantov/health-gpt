@@ -4,7 +4,6 @@
 # Example usage:
 #   export BOT_TOKEN="your-telegram-bot-token"
 #   export OPENAI_KEY="your-openai-api-key"
-#   export REDIS_PASSWORD="your-redis-password"
 
 # Telegram bot settings.
 telegram:
@@ -13,12 +12,9 @@ telegram:
 
 # Storage configuration.
 storage:
-  type: redis
-  redis:
-    address: localhost:6379
-    password: ${REDIS_PASSWORD}
-    db: 0
-    expiration: 720h # TTL (0 - infinite)
+  type: bolt
+  bolt:
+    path: ./data/health-gpt.db
 
 # LLM provider settings.
 llm:
@@ -58,4 +54,4 @@ llm:
 # storage:
 #   type: fs
 #   filesystem:
-#     path: ./data
+#     dir: ./data
