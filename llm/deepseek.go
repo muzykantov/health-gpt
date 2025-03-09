@@ -19,65 +19,77 @@ var (
 	ErrDeepSeekRequestFailed          = errors.New("request failed")
 )
 
-// DeepSeekOption определяет функцию-опцию для конфигурации клиента.
+// DeepSeekOption defines a configuration function for the client.
 type DeepSeekOption func(*DeepSeek)
 
-// DeepSeek реализует клиент для взаимодействия с DeepSeek API.
+// DeepSeek implements a client for interacting with DeepSeek API.
 type DeepSeek struct {
 	client *http.Client
-	// Конфигурационные параметры.
-	model       string  // Модель для использования.
-	temperature float64 // Температура генерации (0.0-2.0).
-	topP        float64 // Top-p сэмплирование (0.0-1.0).
-	maxTokens   int64   // Максимальное количество токенов в ответе.
-	socksProxy  string  // Адрес прокси-сокса.
-	baseURL     string  // Базовый URL для API.
-	apiKey      string  // API ключ для авторизации.
+	// Configuration parameters.
+	model       string  // Model to use.
+	temperature float64 // Generation temperature (0.0-2.0).
+	topP        float64 // Top-p sampling (0.0-1.0).
+	maxTokens   int64   // Maximum number of tokens in response.
+	socksProxy  string  // SOCKS proxy address.
+	baseURL     string  // Base API URL.
+	apiKey      string  // API key for authorization.
 }
 
-// Установка модели для использования.
+// DeepSeekWithModel sets the model to use.
 func DeepSeekWithModel(model string) DeepSeekOption {
 	return func(c *DeepSeek) {
-		c.model = model
+		if model != "" {
+			c.model = model
+		}
 	}
 }
 
-// Установка температуры генерации.
+// DeepSeekWithTemperature sets the generation temperature.
 func DeepSeekWithTemperature(temperature float64) DeepSeekOption {
 	return func(c *DeepSeek) {
-		c.temperature = temperature
+		if temperature != 0 {
+			c.temperature = temperature
+		}
 	}
 }
 
-// Установка параметра top-p сэмплирования.
+// DeepSeekWithTopP sets the top-p sampling parameter.
 func DeepSeekWithTopP(topP float64) DeepSeekOption {
 	return func(c *DeepSeek) {
-		c.topP = topP
+		if topP != 0 {
+			c.topP = topP
+		}
 	}
 }
 
-// Установка максимального количества токенов.
+// DeepSeekWithMaxTokens sets the maximum number of tokens.
 func DeepSeekWithMaxTokens(maxTokens int64) DeepSeekOption {
 	return func(c *DeepSeek) {
-		c.maxTokens = maxTokens
+		if maxTokens != 0 {
+			c.maxTokens = maxTokens
+		}
 	}
 }
 
-// Установка SOCKS прокси.
+// DeepSeekWithSocksProxy sets the SOCKS proxy.
 func DeepSeekWithSocksProxy(socksProxy string) DeepSeekOption {
 	return func(c *DeepSeek) {
-		c.socksProxy = socksProxy
+		if socksProxy != "" {
+			c.socksProxy = socksProxy
+		}
 	}
 }
 
-// Установка базового URL для API.
+// DeepSeekWithBaseURL sets the base API URL.
 func DeepSeekWithBaseURL(baseURL string) DeepSeekOption {
 	return func(c *DeepSeek) {
-		c.baseURL = baseURL
+		if baseURL != "" {
+			c.baseURL = baseURL
+		}
 	}
 }
 
-// NewDeepSeek создает новый экземпляр DeepSeek с заданными опциями.
+// NewDeepSeek creates a new DeepSeek instance with the given options.
 func NewDeepSeek(apiKey string, opts ...DeepSeekOption) (*DeepSeek, error) {
 	c := &DeepSeek{
 		model:       "deepseek-chat",
@@ -114,13 +126,13 @@ func NewDeepSeek(apiKey string, opts ...DeepSeekOption) (*DeepSeek, error) {
 	return c, nil
 }
 
-// DeepSeekMessage представляет сообщение в формате DeepSeek API.
+// DeepSeekMessage represents a message in DeepSeek API format.
 type DeepSeekMessage struct {
 	Role    string `json:"role"`
 	Content string `json:"content"`
 }
 
-// DeepSeekRequest представляет запрос к DeepSeek API.
+// DeepSeekRequest represents a request to DeepSeek API.
 type DeepSeekRequest struct {
 	Model       string            `json:"model"`
 	Messages    []DeepSeekMessage `json:"messages"`
@@ -130,7 +142,7 @@ type DeepSeekRequest struct {
 	MaxTokens   int64             `json:"max_tokens"`
 }
 
-// DeepSeekResponse представляет ответ от DeepSeek API.
+// DeepSeekResponse represents a response from DeepSeek API.
 type DeepSeekResponse struct {
 	ID      string `json:"id"`
 	Object  string `json:"object"`
@@ -149,7 +161,7 @@ type DeepSeekResponse struct {
 	} `json:"usage"`
 }
 
-// CompleteChat реализует интерфейс Completion.
+// CompleteChat implements the Completion interface.
 func (c *DeepSeek) CompleteChat(ctx context.Context, msgs []chat.Message) (chat.Message, error) {
 	deepseekMessages := make([]DeepSeekMessage, len(msgs))
 	for i, msg := range msgs {
@@ -184,7 +196,7 @@ func (c *DeepSeek) CompleteChat(ctx context.Context, msgs []chat.Message) (chat.
 		}
 	}
 
-	// Формирование запроса
+	// Create request
 	request := DeepSeekRequest{
 		Model:       c.model,
 		Messages:    deepseekMessages,

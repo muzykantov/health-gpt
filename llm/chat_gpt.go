@@ -19,63 +19,76 @@ var (
 	ErrChatGPTRequestFailed          = errors.New("request failed")
 )
 
-// ChatGPTOption определяет функцию-опцию для конфигурации клиента.
+// ChatGPTOption defines a configuration function for the client.
 type ChatGPTOption func(*ChatGPT)
 
-// ChatGPT реализует клиент для взаимодействия с ChatGPT.
+// ChatGPT implements a client for interacting with ChatGPT.
 type ChatGPT struct {
 	client *openai.Client
-	// Конфигурационные параметры.
-	model       openai.ChatModel // Модель для использования.
-	temperature float64          // Температура генерации (0.0-2.0).
-	topP        float64          // Top-p сэмплирование (0.0-1.0).
-	maxTokens   int64            // Максимальное количество токенов в ответе.
-	socksProxy  string           // Адрес прокси-сокса.
-	baseURL     string           // Базовый URL для API.
+	// Configuration parameters.
+	model       openai.ChatModel // Model to use.
+	temperature float64          // Generation temperature (0.0-2.0).
+	topP        float64          // Top-p sampling (0.0-1.0).
+	maxTokens   int64            // Maximum number of tokens in response.
+	socksProxy  string           // SOCKS proxy address.
+	baseURL     string           // Base API URL.
 }
 
-// Установка модели для использования.
+// ChatGPTWithModel sets the model to use.
 func ChatGPTWithModel(model string) ChatGPTOption {
 	return func(c *ChatGPT) {
-		c.model = model
+		if model != "" {
+			c.model = model
+		}
 	}
 }
 
-// Установка температуры генерации.
+// ChatGPTWithTemperature sets the generation temperature.
 func ChatGPTWithTemperature(temperature float64) ChatGPTOption {
 	return func(c *ChatGPT) {
-		c.temperature = temperature
+		if temperature != 0 {
+			c.temperature = temperature
+		}
 	}
 }
 
-// Установка параметра top-p сэмплирования.
+// ChatGPTWithTopP sets the top-p sampling parameter.
 func ChatGPTWithTopP(topP float64) ChatGPTOption {
 	return func(c *ChatGPT) {
-		c.topP = topP
+		if topP != 0 {
+			c.topP = topP
+		}
 	}
 }
 
-// Установка максимального количества токенов.
+// ChatGPTWithMaxTokens sets the maximum number of tokens.
 func ChatGPTWithMaxTokens(maxTokens int64) ChatGPTOption {
 	return func(c *ChatGPT) {
-		c.maxTokens = maxTokens
+		if maxTokens != 0 {
+			c.maxTokens = maxTokens
+		}
 	}
 }
 
+// ChatGPTWithSocksProxy sets the SOCKS proxy.
 func ChatGPTWithSocksProxy(socksProxy string) ChatGPTOption {
 	return func(c *ChatGPT) {
-		c.socksProxy = socksProxy
+		if socksProxy != "" {
+			c.socksProxy = socksProxy
+		}
 	}
 }
 
-// Установка базового URL для API.
+// ChatGPTWithBaseURL sets the base API URL.
 func ChatGPTWithBaseURL(baseURL string) ChatGPTOption {
 	return func(c *ChatGPT) {
-		c.baseURL = baseURL
+		if baseURL != "" {
+			c.baseURL = baseURL
+		}
 	}
 }
 
-// NewChatGPT создает новый экземпляр ChatGPT с заданными опциями.
+// NewChatGPT creates a new ChatGPT instance with the given options.
 func NewChatGPT(apiKey string, opts ...ChatGPTOption) (*ChatGPT, error) {
 	c := &ChatGPT{
 		model:       openai.ChatModelGPT4o,
@@ -119,7 +132,7 @@ func NewChatGPT(apiKey string, opts ...ChatGPTOption) (*ChatGPT, error) {
 	return c, nil
 }
 
-// CompleteChat реализует интерфейс Completion.
+// CompleteChat implements the Completion interface.
 func (c *ChatGPT) CompleteChat(ctx context.Context, msgs []chat.Message) (chat.Message, error) {
 	openAIMessages := make([]openai.ChatCompletionMessageParamUnion, len(msgs))
 	for i, msg := range msgs {

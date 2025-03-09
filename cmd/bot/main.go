@@ -3,9 +3,7 @@ package main
 import (
 	"context"
 	"flag"
-	"fmt"
 	"log"
-	"os"
 	"os/signal"
 	"syscall"
 
@@ -21,18 +19,17 @@ import (
 const MsgUnsupportedType = "❌ Тип сообщения не поддерживается."
 
 func main() {
-	// Парсим флаги командной строки.
+	// Parse command line flags.
 	configPath := flag.String("config", "config.yaml", "path to configuration file")
 	flag.Parse()
 
-	// Загружаем конфигурацию.
+	// Load configuration.
 	cfg, err := config.FromFile(*configPath)
 	if err != nil {
-		fmt.Printf("Error loading configuration: %v\n", err)
-		os.Exit(1)
+		log.Fatalf("loading configuration: %v", err)
 	}
 
-	// Инициализируем LLM в зависимости от конфигурации.
+	// Initialize LLM based on configuration.
 	var ai server.ChatCompleter
 	switch cfg.LLM.Provider {
 	case config.ProviderChatGPT:
@@ -45,17 +42,25 @@ func main() {
 			llm.ChatGPTWithSocksProxy(cfg.LLM.ChatGPT.SocksProxy),
 			llm.ChatGPTWithBaseURL(cfg.LLM.ChatGPT.BaseURL),
 		)
+	case config.ProviderDeepSeek:
+		ai, err = llm.NewDeepSeek(
+			cfg.LLM.DeepSeek.APIKey,
+			llm.DeepSeekWithTemperature(cfg.LLM.DeepSeek.Temperature),
+			llm.DeepSeekWithModel(cfg.LLM.DeepSeek.Model),
+			llm.DeepSeekWithTopP(cfg.LLM.DeepSeek.TopP),
+			llm.DeepSeekWithMaxTokens(cfg.LLM.DeepSeek.MaxTokens),
+			llm.DeepSeekWithSocksProxy(cfg.LLM.DeepSeek.SocksProxy),
+			llm.DeepSeekWithBaseURL(cfg.LLM.DeepSeek.BaseURL),
+		)
 	default:
-		fmt.Printf("Unknown LLM provider: %s\n", cfg.LLM.Provider)
-		os.Exit(1)
+		log.Fatalf("unknown LLM provider: %s", cfg.LLM.Provider)
 	}
 
 	if err != nil {
-		fmt.Printf("Error creating LLM client: %v\n", err)
-		os.Exit(1)
+		log.Fatalf("creating LLM client: %v", err)
 	}
 
-	// Инициализируем обработчики.
+	// Initialize handlers.
 	var (
 		myGeneticsHandler = handler.MyGenetics()
 		authHandler       = handler.Auth(myGeneticsHandler)
@@ -66,27 +71,26 @@ func main() {
 	case config.TypeFS:
 		dataStorage, err = storage.NewFS(cfg.Storage.Filesystem.Dir)
 		if err != nil {
-			fmt.Printf("Error creating file storage: %v\n", err)
-			os.Exit(1)
+			log.Fatalf("creating file storage: %v", err)
 		}
 
 	case config.TypeBolt:
-		dataStorage, err = storage.NewBolt(cfg.Storage.Bolt.Path)
+		boltStorage, err := storage.NewBolt(cfg.Storage.Bolt.Path)
 		if err != nil {
-			fmt.Printf("Error creating bolt db storage: %v\n", err)
-			os.Exit(1)
+			log.Fatalf("creating bolt db storage: %v", err)
 		}
+		dataStorage = boltStorage
+		defer boltStorage.Close()
 
 	default:
-		fmt.Printf("Unknown storage type: %s\n", cfg.Storage.Type)
-		os.Exit(1)
+		log.Fatalf("unknown storage type: %s", cfg.Storage.Type)
 	}
 
 	unsupported := func() chat.Message {
 		return chat.NewMessage(chat.RoleAssistant, MsgUnsupportedType)
 	}
 
-	// Создаем и конфигурируем сервер.
+	// Create and configure the server.
 	srv := &telegram.Server{
 		Token:               cfg.Telegram.Token,
 		Handler:             authHandler,
@@ -97,7 +101,7 @@ func main() {
 		ErrorLog:            log.Default(),
 	}
 
-	// Настраиваем контекст с обработкой сигналов.
+	// Setup context with signal handling.
 	ctx, stop := signal.NotifyContext(
 		context.Background(),
 		syscall.SIGINT,
@@ -105,9 +109,8 @@ func main() {
 	)
 	defer stop()
 
-	// Запускаем сервер.
+	// Start the server.
 	if err := srv.ListenAndServe(ctx); err != nil {
-		fmt.Printf("Error starting server: %v\n", err)
-		os.Exit(1)
+		log.Fatalf("starting server: %v", err)
 	}
 }
