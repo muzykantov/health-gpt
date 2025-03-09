@@ -4,8 +4,9 @@ package config
 type LLM struct {
 	Provider `yaml:"provider"`
 
-	ChatGPT `yaml:"chatgpt"`
-	Claude  `yaml:"claude"`
+	ChatGPT  `yaml:"chatgpt"`
+	Claude   `yaml:"claude"`
+	DeepSeek `yaml:"deepseek"`
 }
 
 // Provider defines supported LLM providers.
@@ -19,6 +20,17 @@ const (
 
 // ChatGPT configuration for OpenAI GPT models.
 type ChatGPT struct {
+	APIKey      string  `yaml:"api_key"`
+	Model       string  `yaml:"model"`
+	Temperature float64 `yaml:"temperature"`
+	TopP        float64 `yaml:"top_p"`
+	MaxTokens   int64   `yaml:"max_tokens"`
+	SocksProxy  string  `yaml:"socks_proxy"`
+	BaseURL     string  `yaml:"base_url"`
+}
+
+// DeepSeek configuration for DeepSeek models.
+type DeepSeek struct {
 	APIKey      string  `yaml:"api_key"`
 	Model       string  `yaml:"model"`
 	Temperature float64 `yaml:"temperature"`

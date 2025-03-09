@@ -77,7 +77,6 @@ func ChatGPTWithBaseURL(baseURL string) ChatGPTOption {
 
 // NewChatGPT создает новый экземпляр ChatGPT с заданными опциями.
 func NewChatGPT(apiKey string, opts ...ChatGPTOption) (*ChatGPT, error) {
-	// Инициализация клиента со значениями по умолчанию.
 	c := &ChatGPT{
 		model:       openai.ChatModelGPT4o,
 		temperature: 0.1,
@@ -85,7 +84,6 @@ func NewChatGPT(apiKey string, opts ...ChatGPTOption) (*ChatGPT, error) {
 		maxTokens:   1024,
 	}
 
-	// Применение переданных опций.
 	for _, opt := range opts {
 		opt(c)
 	}
@@ -123,7 +121,6 @@ func NewChatGPT(apiKey string, opts ...ChatGPTOption) (*ChatGPT, error) {
 
 // CompleteChat реализует интерфейс Completion.
 func (c *ChatGPT) CompleteChat(ctx context.Context, msgs []chat.Message) (chat.Message, error) {
-	// Преобразование сообщений в формат OpenAI.
 	openAIMessages := make([]openai.ChatCompletionMessageParamUnion, len(msgs))
 	for i, msg := range msgs {
 		content, ok := msg.Content.(string)
@@ -154,7 +151,6 @@ func (c *ChatGPT) CompleteChat(ctx context.Context, msgs []chat.Message) (chat.M
 		openAIMessages[i] = message
 	}
 
-	// Запрос к ChatGPT API.
 	chatCompletion, err := c.client.Chat.Completions.New(
 		ctx,
 		openai.ChatCompletionNewParams{
@@ -180,7 +176,6 @@ func (c *ChatGPT) CompleteChat(ctx context.Context, msgs []chat.Message) (chat.M
 		)
 	}
 
-	// Преобразование ответа в нужный формат.
 	return chat.Message{
 		Sender:  chat.RoleAssistant,
 		Content: chatCompletion.Choices[0].Message.Content,
