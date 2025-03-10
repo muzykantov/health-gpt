@@ -2,7 +2,8 @@ package config
 
 // LLM represents configuration for different LLM providers.
 type LLM struct {
-	Provider `yaml:"provider"`
+	Provider        `yaml:"provider"`
+	VerifyResponses bool `yaml:"verify_responses"`
 
 	ChatGPT  `yaml:"chatgpt"`
 	Claude   `yaml:"claude"`

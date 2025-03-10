@@ -60,6 +60,10 @@ func main() {
 		log.Fatalf("creating LLM client: %v", err)
 	}
 
+	if cfg.LLM.VerifyResponses {
+		ai = llm.NewVerificator(ai)
+	}
+
 	// Initialize handlers.
 	var (
 		myGeneticsHandler = handler.MyGenetics()
