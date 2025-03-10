@@ -32,15 +32,15 @@ func main() {
 	// Initialize LLM based on configuration.
 	var ai server.ChatCompleter
 	switch cfg.LLM.Provider {
-	case config.ProviderChatGPT:
-		ai, err = llm.NewChatGPT(
-			cfg.LLM.ChatGPT.APIKey,
-			llm.ChatGPTWithTemperature(cfg.LLM.ChatGPT.Temperature),
-			llm.ChatGPTWithModel(cfg.LLM.ChatGPT.Model),
-			llm.ChatGPTWithTopP(cfg.LLM.ChatGPT.TopP),
-			llm.ChatGPTWithMaxTokens(cfg.LLM.ChatGPT.MaxTokens),
-			llm.ChatGPTWithSocksProxy(cfg.LLM.ChatGPT.SocksProxy),
-			llm.ChatGPTWithBaseURL(cfg.LLM.ChatGPT.BaseURL),
+	case config.ProviderOpenAI:
+		ai, err = llm.NewOpenAI(
+			cfg.LLM.OpenAI.APIKey,
+			llm.OpenAIWithTemperature(cfg.LLM.OpenAI.Temperature),
+			llm.OpenAIWithModel(cfg.LLM.OpenAI.Model),
+			llm.OpenAIWithTopP(cfg.LLM.OpenAI.TopP),
+			llm.OpenAIWithMaxTokens(cfg.LLM.OpenAI.MaxTokens),
+			llm.OpenAIWithSocksProxy(cfg.LLM.OpenAI.SocksProxy),
+			llm.OpenAIWithBaseURL(cfg.LLM.OpenAI.BaseURL),
 		)
 	case config.ProviderAnthropic:
 		ai, err = llm.NewAnthropic(

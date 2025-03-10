@@ -5,7 +5,7 @@ type LLM struct {
 	Provider        `yaml:"provider"`
 	VerifyResponses bool `yaml:"verify_responses"`
 
-	ChatGPT   `yaml:"chatgpt"`
+	OpenAI    `yaml:"openai"`
 	Anthropic `yaml:"anthropic"`
 	DeepSeek  `yaml:"deepseek"`
 	Mistral   `yaml:"mistral"`
@@ -15,14 +15,14 @@ type LLM struct {
 type Provider string
 
 const (
-	ProviderChatGPT   Provider = "chatgpt"
+	ProviderOpenAI    Provider = "openai"
 	ProviderAnthropic Provider = "anthropic"
 	ProviderDeepSeek  Provider = "deepseek"
 	ProviderMistral   Provider = "mistral"
 )
 
-// ChatGPT configuration for OpenAI GPT models.
-type ChatGPT struct {
+// OpenAI configuration for models.
+type OpenAI struct {
 	APIKey      string  `yaml:"api_key"`
 	Model       string  `yaml:"model"`
 	Temperature float64 `yaml:"temperature"`
@@ -32,7 +32,7 @@ type ChatGPT struct {
 	BaseURL     string  `yaml:"base_url"`
 }
 
-// Anthropic configuration for Anthropic models.
+// Anthropic configuration for models.
 type Anthropic struct {
 	APIKey      string  `yaml:"api_key"`
 	Model       string  `yaml:"model"`
@@ -43,7 +43,7 @@ type Anthropic struct {
 	BaseURL     string  `yaml:"base_url"`
 }
 
-// DeepSeek configuration for DeepSeek models.
+// DeepSeek configuration for models.
 type DeepSeek struct {
 	APIKey      string  `yaml:"api_key"`
 	Model       string  `yaml:"model"`
@@ -54,7 +54,7 @@ type DeepSeek struct {
 	BaseURL     string  `yaml:"base_url"`
 }
 
-// Mistral configuration for Mistral AI models.
+// Mistral configuration for models.
 type Mistral struct {
 	APIKey      string  `yaml:"api_key"`
 	Model       string  `yaml:"model"`

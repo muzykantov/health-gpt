@@ -11,24 +11,24 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestChatGPTCompletion_Integration(t *testing.T) {
+func TestOpenAICompletion_Integration(t *testing.T) {
 	// Пропуск теста, если OPENAI_API_KEY не установлен.
 	apiKey := os.Getenv("OPENAI_API_KEY")
 	if apiKey == "" {
 		t.Skip("OPENAI_API_KEY not set")
 	}
 
-	opts := []ChatGPTOption{
-		ChatGPTWithTemperature(0.7),
-		ChatGPTWithMaxTokens(256),
+	opts := []OpenAIOption{
+		OpenAIWithTemperature(0.7),
+		OpenAIWithMaxTokens(256),
 	}
 
 	if proxy := os.Getenv("OPENAI_SOCKS_PROXY"); proxy != "" {
-		opts = append(opts, ChatGPTWithSocksProxy(proxy))
+		opts = append(opts, OpenAIWithSocksProxy(proxy))
 	}
 
-	// Инициализация ChatGPT.
-	client, err := NewChatGPT(apiKey, opts...)
+	// Инициализация OpenAI.
+	client, err := NewOpenAI(apiKey, opts...)
 	require.NoError(t, err, "Failed to create OpenAI client")
 
 	// Создание контекста с таймаутом.

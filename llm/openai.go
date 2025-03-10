@@ -14,16 +14,16 @@ import (
 )
 
 var (
-	ErrChatGPTUnsupportedRole        = errors.New("unsupported role")
-	ErrChatGPTUnsupportedContentType = errors.New("unsupported content type")
-	ErrChatGPTRequestFailed          = errors.New("request failed")
+	ErrOpenAIUnsupportedRole        = errors.New("unsupported role")
+	ErrOpenAIUnsupportedContentType = errors.New("unsupported content type")
+	ErrOpenAIRequestFailed          = errors.New("request failed")
 )
 
-// ChatGPTOption defines a configuration function for the client.
-type ChatGPTOption func(*ChatGPT)
+// OpenAIOption defines a configuration function for the client.
+type OpenAIOption func(*OpenAI)
 
-// ChatGPT implements a client for interacting with ChatGPT.
-type ChatGPT struct {
+// OpenAI implements a client for interacting with OpenAI.
+type OpenAI struct {
 	client *openai.Client
 	// Configuration parameters.
 	model       openai.ChatModel // Model to use.
@@ -34,63 +34,63 @@ type ChatGPT struct {
 	baseURL     string           // Base API URL.
 }
 
-// ChatGPTWithModel sets the model to use.
-func ChatGPTWithModel(model string) ChatGPTOption {
-	return func(c *ChatGPT) {
+// OpenAIWithModel sets the model to use.
+func OpenAIWithModel(model string) OpenAIOption {
+	return func(c *OpenAI) {
 		if model != "" {
 			c.model = model
 		}
 	}
 }
 
-// ChatGPTWithTemperature sets the generation temperature.
-func ChatGPTWithTemperature(temperature float64) ChatGPTOption {
-	return func(c *ChatGPT) {
+// OpenAIWithTemperature sets the generation temperature.
+func OpenAIWithTemperature(temperature float64) OpenAIOption {
+	return func(c *OpenAI) {
 		if temperature != 0 {
 			c.temperature = temperature
 		}
 	}
 }
 
-// ChatGPTWithTopP sets the top-p sampling parameter.
-func ChatGPTWithTopP(topP float64) ChatGPTOption {
-	return func(c *ChatGPT) {
+// OpenAIWithTopP sets the top-p sampling parameter.
+func OpenAIWithTopP(topP float64) OpenAIOption {
+	return func(c *OpenAI) {
 		if topP != 0 {
 			c.topP = topP
 		}
 	}
 }
 
-// ChatGPTWithMaxTokens sets the maximum number of tokens.
-func ChatGPTWithMaxTokens(maxTokens int64) ChatGPTOption {
-	return func(c *ChatGPT) {
+// OpenAIWithMaxTokens sets the maximum number of tokens.
+func OpenAIWithMaxTokens(maxTokens int64) OpenAIOption {
+	return func(c *OpenAI) {
 		if maxTokens != 0 {
 			c.maxTokens = maxTokens
 		}
 	}
 }
 
-// ChatGPTWithSocksProxy sets the SOCKS proxy.
-func ChatGPTWithSocksProxy(socksProxy string) ChatGPTOption {
-	return func(c *ChatGPT) {
+// OpenAIWithSocksProxy sets the SOCKS proxy.
+func OpenAIWithSocksProxy(socksProxy string) OpenAIOption {
+	return func(c *OpenAI) {
 		if socksProxy != "" {
 			c.socksProxy = socksProxy
 		}
 	}
 }
 
-// ChatGPTWithBaseURL sets the base API URL.
-func ChatGPTWithBaseURL(baseURL string) ChatGPTOption {
-	return func(c *ChatGPT) {
+// OpenAIWithBaseURL sets the base API URL.
+func OpenAIWithBaseURL(baseURL string) OpenAIOption {
+	return func(c *OpenAI) {
 		if baseURL != "" {
 			c.baseURL = baseURL
 		}
 	}
 }
 
-// NewChatGPT creates a new ChatGPT instance with the given options.
-func NewChatGPT(apiKey string, opts ...ChatGPTOption) (*ChatGPT, error) {
-	c := &ChatGPT{
+// NewOpenAI creates a new client instance with the given options.
+func NewOpenAI(apiKey string, opts ...OpenAIOption) (*OpenAI, error) {
+	c := &OpenAI{
 		model:       openai.ChatModelGPT4o,
 		temperature: 0.1,
 		topP:        1.0,
@@ -133,14 +133,14 @@ func NewChatGPT(apiKey string, opts ...ChatGPTOption) (*ChatGPT, error) {
 }
 
 // CompleteChat implements the Completion interface.
-func (c *ChatGPT) CompleteChat(ctx context.Context, msgs []chat.Message) (chat.Message, error) {
+func (c *OpenAI) CompleteChat(ctx context.Context, msgs []chat.Message) (chat.Message, error) {
 	openAIMessages := make([]openai.ChatCompletionMessageParamUnion, len(msgs))
 	for i, msg := range msgs {
 		content, ok := msg.Content.(string)
 		if !ok {
 			return chat.EmptyMessage, fmt.Errorf(
 				"%w: %T",
-				ErrChatGPTUnsupportedContentType,
+				ErrOpenAIUnsupportedContentType,
 				msg.Content,
 			)
 		}
@@ -156,7 +156,7 @@ func (c *ChatGPT) CompleteChat(ctx context.Context, msgs []chat.Message) (chat.M
 		default:
 			return chat.EmptyMessage, fmt.Errorf(
 				"%w: %v",
-				ErrChatGPTUnsupportedRole,
+				ErrOpenAIUnsupportedRole,
 				msg.Sender,
 			)
 		}
@@ -177,7 +177,7 @@ func (c *ChatGPT) CompleteChat(ctx context.Context, msgs []chat.Message) (chat.M
 	if err != nil {
 		return chat.EmptyMessage, fmt.Errorf(
 			"%w: chatgpt request failed: %w",
-			ErrChatGPTRequestFailed,
+			ErrOpenAIRequestFailed,
 			err,
 		)
 	}
@@ -185,7 +185,7 @@ func (c *ChatGPT) CompleteChat(ctx context.Context, msgs []chat.Message) (chat.M
 	if len(chatCompletion.Choices) == 0 {
 		return chat.EmptyMessage, fmt.Errorf(
 			"%w: no choices in response",
-			ErrChatGPTRequestFailed,
+			ErrOpenAIRequestFailed,
 		)
 	}
 
