@@ -7,4 +7,8 @@ services:
     restart: unless-stopped
     volumes:
       - ./config.yaml:/app/config.yaml:ro
-      - ./data:/app/data
+      - health_gpt_data:/app/data
+
+volumes:
+  health_gpt_data:
+    name: health_gpt_data
