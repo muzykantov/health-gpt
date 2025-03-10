@@ -56,5 +56,5 @@ llm:
 # File system:
 # storage:
 #   type: fs
-#   filesystem:
+#   fs:
 #     dir: ./data

@@ -69,7 +69,7 @@ func main() {
 	var dataStorage server.DataStorage
 	switch cfg.Storage.Type {
 	case config.TypeFS:
-		dataStorage, err = storage.NewFS(cfg.Storage.Filesystem.Dir)
+		dataStorage, err = storage.NewFS(cfg.Storage.FS.Dir)
 		if err != nil {
 			log.Fatalf("creating file storage: %v", err)
 		}

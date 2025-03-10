@@ -4,8 +4,8 @@ package config
 type Storage struct {
 	Type `yaml:"type"`
 
-	Filesystem `yaml:"filesystem"`
-	Bolt       `yaml:"bolt"`
+	FS   `yaml:"fs"`
+	Bolt `yaml:"bolt"`
 }
 
 // Type defines supported storage types.
@@ -16,8 +16,8 @@ const (
 	TypeBolt Type = "bolt"
 )
 
-// Filesystem configuration for file-based storage.
-type Filesystem struct {
+// FS configuration for file-based storage.
+type FS struct {
 	Dir string `yaml:"dir"`
 }
 
