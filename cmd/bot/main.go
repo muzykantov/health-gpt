@@ -42,6 +42,16 @@ func main() {
 			llm.ChatGPTWithSocksProxy(cfg.LLM.ChatGPT.SocksProxy),
 			llm.ChatGPTWithBaseURL(cfg.LLM.ChatGPT.BaseURL),
 		)
+	case config.ProviderAnthropic:
+		ai, err = llm.NewAnthropic(
+			cfg.LLM.Mistral.APIKey,
+			llm.AnthropicWithTemperature(cfg.LLM.Mistral.Temperature),
+			llm.AnthropicWithModel(cfg.LLM.Mistral.Model),
+			llm.AnthropicWithTopP(cfg.LLM.Mistral.TopP),
+			llm.AnthropicWithMaxTokens(cfg.LLM.Mistral.MaxTokens),
+			llm.AnthropicWithSocksProxy(cfg.LLM.Mistral.SocksProxy),
+			llm.AnthropicWithBaseURL(cfg.LLM.Mistral.BaseURL),
+		)
 	case config.ProviderDeepSeek:
 		ai, err = llm.NewDeepSeek(
 			cfg.LLM.DeepSeek.APIKey,
@@ -51,6 +61,16 @@ func main() {
 			llm.DeepSeekWithMaxTokens(cfg.LLM.DeepSeek.MaxTokens),
 			llm.DeepSeekWithSocksProxy(cfg.LLM.DeepSeek.SocksProxy),
 			llm.DeepSeekWithBaseURL(cfg.LLM.DeepSeek.BaseURL),
+		)
+	case config.ProviderMistral:
+		ai, err = llm.NewMistral(
+			cfg.LLM.Mistral.APIKey,
+			llm.MistralWithTemperature(cfg.LLM.Mistral.Temperature),
+			llm.MistralWithModel(cfg.LLM.Mistral.Model),
+			llm.MistralWithTopP(cfg.LLM.Mistral.TopP),
+			llm.MistralWithMaxTokens(cfg.LLM.Mistral.MaxTokens),
+			llm.MistralWithSocksProxy(cfg.LLM.Mistral.SocksProxy),
+			llm.MistralWithBaseURL(cfg.LLM.Mistral.BaseURL),
 		)
 	default:
 		log.Fatalf("unknown LLM provider: %s", cfg.LLM.Provider)

@@ -2,8 +2,8 @@
 #
 # Environment variables are supported using ${VAR_NAME} syntax.
 # Example usage:
-#   export BOT_TOKEN="your-telegram-bot-token"
-#   export OPENAI_KEY="your-openai-api-key"
+#   export BOT_TOKEN="your-bot-token"
+#   export OPENAI_KEY="your-api-key"
 
 # Telegram bot settings.
 telegram:
@@ -19,7 +19,6 @@ storage:
 # LLM provider settings.
 llm:
   provider: chatgpt
-  verify_responses: true
   chatgpt:
     api_key: ${OPENAI_KEY}
     model: gpt-4o
@@ -31,14 +30,17 @@ llm:
 
 # Alternative LLM configuration examples:
 #
-# Claude:
+# Anthropic:
 # llm:
-#   provider: claude
-#   claude:
-#     api_key: ${CLAUDE_KEY}
-#     model: claude-3-opus-20240229
+#   provider: anthropic
+#   anthropic:
+#     api_key: ${ANTHROPIC_KEY}
+#     model: claude-3-7-sonnet-latest
+#     top_p: 1.0
 #     temperature: 0.7
 #     max_tokens: 2000
+#     socks_proxy: socks5://localhost:1080
+#     base_url: https://api.anthropic.com/v1
 #
 # DeepSeek:
 # llm:
@@ -51,6 +53,18 @@ llm:
 #     max_tokens: 2000
 #     socks_proxy: socks5://localhost:1080
 #     base_url: https://api.deepseek.com
+#
+# Mistral:
+# llm:
+#   provider: mistral
+#   mistral:
+#     api_key: ${MISTRAL_KEY}
+#     model: mistral-small-latest
+#     temperature: 0.7
+#     top_p: 1.0
+#     max_tokens: 2000
+#     socks_proxy: socks5://localhost:1080
+#     base_url: https://api.mistral.ai
 #
 # Alternative storage examples:
 #

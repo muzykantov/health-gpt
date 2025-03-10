@@ -3,6 +3,7 @@ module github.com/muzykantov/health-gpt
 go 1.24.1
 
 require (
+	github.com/anthropics/anthropic-sdk-go v0.2.0-alpha.13
 	github.com/go-telegram-bot-api/telegram-bot-api/v5 v5.5.1
 	github.com/openai/openai-go v0.1.0-alpha.61
 	github.com/stretchr/testify v1.10.0
