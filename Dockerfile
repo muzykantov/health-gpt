@@ -20,6 +20,6 @@ WORKDIR /app
 
 COPY --from=builder /bot .
 
-COPY config.json .
+COPY config.yaml .
 
-CMD ["./bot", "-config", "config.json"]
+CMD ["./bot", "-config", "config.yaml"]
