@@ -37,7 +37,7 @@ func myGeneticsCodelab(code string) server.Handler {
 				w.WriteResponse(chat.MsgA("⚠️ Не удалось получить информацию об анализе. " +
 					"Пожалуйста, попробуйте позже или обратитесь в поддержку."))
 
-				r.ErrorLog.Printf("failed to fetch features (chatID: %d): %v", r.ChatID, err)
+				r.Log.Printf("failed to fetch features (chatID: %d): %v", r.ChatID, err)
 				return
 			}
 
@@ -76,7 +76,7 @@ func myGeneticsCodelab(code string) server.Handler {
 					"Пожалуйста, попробуйте позже или " +
 					"просмотрите результаты без анализа ИИ."))
 
-				r.ErrorLog.Printf("failed to complete chat (chatID: %d): %v", r.ChatID, err)
+				r.Log.Printf("failed to complete chat (chatID: %d): %v", r.ChatID, err)
 				return
 			}
 

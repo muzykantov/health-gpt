@@ -30,7 +30,7 @@ type Server struct {
 	Storage             server.DataStorage
 	Debug               bool
 	UnsupportedResponse func() chat.Message
-	ErrorLog            *log.Logger
+	Log                 *log.Logger
 }
 
 // ListenAndServe запускает основной цикл обработки сообщений.
@@ -56,9 +56,9 @@ func (t *Server) ListenAndServe(ctx context.Context) error {
 		dataStorage = &unimplementedDataStorage{}
 	}
 
-	errorLog := t.ErrorLog
-	if errorLog == nil {
-		t.ErrorLog = log.Default()
+	logger := t.Log
+	if logger == nil {
+		t.Log = log.Default()
 	}
 
 	bot, err := tgbotapi.NewBotAPI(t.Token)
@@ -74,7 +74,7 @@ func (t *Server) ListenAndServe(ctx context.Context) error {
 				chatID,
 				t.UnsupportedResponse(),
 			); err != nil {
-				errorLog.Printf("failed to send unsupported message response: %v", err)
+				logger.Printf("failed to send unsupported message response: %v", err)
 			}
 		}
 	}
@@ -163,14 +163,14 @@ func (t *Server) ListenAndServe(ctx context.Context) error {
 				}
 
 			default:
-				errorLog.Printf("unsupported update: %v", update)
+				logger.Printf("unsupported update: %v", update)
 				continue
 			}
 
 			from, err := dataStorage.GetUser(ctx, sender.ID)
 			if err != nil {
 				if !errors.Is(err, storage.ErrUserNotFound) {
-					errorLog.Printf("failed to get user: %v", err)
+					logger.Printf("failed to get user: %v", err)
 					continue
 				}
 
@@ -185,16 +185,16 @@ func (t *Server) ListenAndServe(ctx context.Context) error {
 			go func() {
 				defer func() {
 					if r := recover(); r != nil {
-						errorLog.Printf("recovered from panic: %v", r)
+						logger.Printf("recovered from panic: %v", r)
 					}
 				}()
 
 				t.Handler.Serve(
 					ctx,
 					&telegramResponseWriter{
-						chatID:   chatID,
-						sender:   bot,
-						errorLog: errorLog,
+						chatID: chatID,
+						sender: bot,
+						log:    logger,
 					},
 					&server.Request{
 						ChatID:   chatID,
@@ -203,7 +203,7 @@ func (t *Server) ListenAndServe(ctx context.Context) error {
 
 						Completer: chatCompletion,
 						Storage:   dataStorage,
-						ErrorLog:  errorLog,
+						Log:       logger,
 					})
 			}()
 		}
@@ -212,9 +212,9 @@ func (t *Server) ListenAndServe(ctx context.Context) error {
 
 // telegramResponseWriter адаптирует отправку сообщений к интерфейсу ResponseWriter.
 type telegramResponseWriter struct {
-	chatID   int64
-	sender   *tgbotapi.BotAPI
-	errorLog *log.Logger
+	chatID int64
+	sender *tgbotapi.BotAPI
+	log    *log.Logger
 }
 
 func (w *telegramResponseWriter) WriteResponse(m chat.Message) error {
@@ -223,7 +223,7 @@ func (w *telegramResponseWriter) WriteResponse(m chat.Message) error {
 	}
 
 	if err := SendMessage(w.sender, w.chatID, m); err != nil {
-		w.errorLog.Printf("failed to send message to chatID %d: %v", w.chatID, err)
+		w.log.Printf("failed to send message to chatID %d: %v", w.chatID, err)
 		return err
 	}
 

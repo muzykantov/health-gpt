@@ -23,7 +23,7 @@ func myGeneticsChat() server.Handler {
 			msgText, ok := r.Incoming.Content.(string)
 			if !ok {
 				w.WriteResponse(chat.MsgA("⛔ Пожалуйста, отправьте текстовое сообщение."))
-				r.ErrorLog.Printf("invalid message content type (chatID: %d): expected string, got %T",
+				r.Log.Printf("invalid message content type (chatID: %d): expected string, got %T",
 					r.ChatID, r.Incoming.Content)
 				return
 			}
@@ -38,7 +38,7 @@ func myGeneticsChat() server.Handler {
 			history, err := r.Storage.GetChatHistory(ctx, r.ChatID, 100)
 			if err != nil {
 				w.WriteResponse(chat.MsgAf("⚠️ Ошибка получения истории чата: %v", err))
-				r.ErrorLog.Printf("failed to read chat history (chatID: %d): %v", r.ChatID, err)
+				r.Log.Printf("failed to read chat history (chatID: %d): %v", r.ChatID, err)
 				return
 			}
 
@@ -57,7 +57,7 @@ func myGeneticsChat() server.Handler {
 			if err != nil {
 				w.WriteResponse(chat.MsgA("⚠️ Не удалось загрузить анализы. " +
 					"Пожалуйста, попробуйте позже или обратитесь в поддержку."))
-				r.ErrorLog.Printf("failed to fetch codelabs (chatID: %d): %v", r.ChatID, err)
+				r.Log.Printf("failed to fetch codelabs (chatID: %d): %v", r.ChatID, err)
 				return
 			}
 
@@ -73,7 +73,7 @@ func myGeneticsChat() server.Handler {
 				if err != nil {
 					w.WriteResponse(chat.MsgAf("⚠️ Не удалось загрузить результаты анализа %s: %v",
 						codelab.Code, err))
-					r.ErrorLog.Printf("failed to fetch features for codelab %s (chatID: %d): %v",
+					r.Log.Printf("failed to fetch features for codelab %s (chatID: %d): %v",
 						codelab.Code, r.ChatID, err)
 					continue
 				}
@@ -111,7 +111,7 @@ func myGeneticsChat() server.Handler {
 			if err != nil {
 				w.WriteResponse(chat.MsgA("⚠️ Не удалось получить ответ. " +
 					"Пожалуйста, попробуйте позже или переформулируйте вопрос."))
-				r.ErrorLog.Printf("failed to complete chat (chatID: %d): %v", r.ChatID, err)
+				r.Log.Printf("failed to complete chat (chatID: %d): %v", r.ChatID, err)
 				return
 			}
 
@@ -125,7 +125,7 @@ func myGeneticsChat() server.Handler {
 
 			if err := r.Storage.SaveChatHistory(ctx, r.ChatID, newHistory); err != nil {
 				w.WriteResponse(chat.MsgAf("⚠️ Ошибка сохранения истории чата: %v", err))
-				r.ErrorLog.Printf("failed to write chat history (chatID: %d): %v", r.ChatID, err)
+				r.Log.Printf("failed to write chat history (chatID: %d): %v", r.ChatID, err)
 				return
 			}
 

@@ -32,14 +32,14 @@ type DataStorage interface {
 
 // Request содержит входящее сообщение и сервисы для его обработки.
 type Request struct {
-	ChatID   int64        // Идентификатор чата.
-	Incoming chat.Message // Входящее сообщение.
-	From     chat.User    // Пользователь, отправивший входящее сообщение.
+	ChatID   int64
+	Incoming chat.Message
+	From     chat.User
 
-	Completer ChatCompleter // Сервис генерации ответов.
+	Completer ChatCompleter
 	Storage   DataStorage
 
-	ErrorLog *log.Logger // Сервис логирования ошибок
+	Log *log.Logger
 }
 
 // ResponseWriter записывает ответное сообщение.

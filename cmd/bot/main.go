@@ -122,7 +122,7 @@ func main() {
 		Storage:             dataStorage,
 		Debug:               cfg.Telegram.Debug,
 		UnsupportedResponse: unsupported,
-		ErrorLog:            log.Default(),
+		Log:                 log.Default(),
 	}
 
 	// Setup context with signal handling.
