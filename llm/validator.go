@@ -12,8 +12,8 @@ import (
 	"github.com/muzykantov/health-gpt/chat"
 )
 
-// ValidationPrompt is the system prompt used for validation.
-const ValidationPrompt = `You are a language model output validator.
+// validationPrompt is the system prompt used for validation.
+const validationPrompt = `You are a language model output validator.
 Analyze the response based on:
 1. PROMPT COMPLIANCE - the response MUST follow the system prompt structure
 2. ACCURACY - factual correctness of information
@@ -27,6 +27,17 @@ Return ONLY a RAW JSON with this EXACT structure WITHOUT ANY MARKDOWN OR COMMENT
 "reason": "explanation in Russian if can_send_to_user is false or follows_prompt is false"
 }
 IMPORTANT: Return ONLY valid RAW JSON. NOTHING ELSE.`
+
+// correctionPrompt is the template for requesting corrections.
+const correctionPrompt = `[VALIDATOR]. Ответ требует корректировки.
+ПРИЧИНА: %s
+ПРОБЛЕМЫ:
+- Соответствие структуре: %v
+- Можно отправить пользователю: %v
+- Надежность: %.0f%%
+Исправь ответ с учетом указанных ПРОБЛЕМ. Следуй структуре системного промпта.
+НЕ ВЕДИ ДИАЛОГ С VALIDATOR, ОТВЕТЬ ЗАНОВО С УЧЕТОМ КОРРЕКТИРОВОК.
+НАДЕЖНОСТЬ ДОЛЖНА СТРЕМИТЬСЯ К 100%%`
 
 const defaultMaxRetryAttempts = 5
 
@@ -155,12 +166,7 @@ func (v *Validator) CompleteChat(ctx context.Context, msgs []chat.Message) (chat
 		correctionMsgs = append(correctionMsgs, chat.Message{
 			Sender: chat.RoleUser,
 			Content: fmt.Sprintf(
-				"[VALIDATOR]. Ответ требует корректировки.\nПРИЧИНА: %s\nПРОБЛЕМЫ:\n"+
-					"- Соответствие структуре: %v\n"+
-					"- Можно отправить пользователю: %v\n"+
-					"- Надежность: %.0f%%\n"+
-					"Исправь ответ с учетом указанных ПРОБЛЕМ. Следуй структуре системного промпта.\n"+
-					"НЕ ВЕДИ ДИАЛОГ С VALIDATOR, ОТВЕТЬ ЗАНОВО С УЧЕТОМ КОРРЕКТИРОВОК.\nНАДЕЖНОСТЬ ДОЛЖНА СТРЕМИТЬСЯ К 100%%",
+				correctionPrompt,
 				valid.Reason,
 				valid.FollowsPrompt,
 				valid.CanSendToUser,
@@ -204,7 +210,7 @@ func (v *Validator) validateResponse(ctx context.Context, originalMsgs []chat.Me
 	validationMsgs := []chat.Message{
 		{
 			Sender:  chat.RoleSystem,
-			Content: ValidationPrompt,
+			Content: validationPrompt,
 		},
 		{
 			Sender: chat.RoleUser,
