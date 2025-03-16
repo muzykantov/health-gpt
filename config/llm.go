@@ -2,8 +2,8 @@ package config
 
 // LLM represents configuration for different LLM providers.
 type LLM struct {
-	Provider        `yaml:"provider"`
-	VerifyResponses bool `yaml:"verify_responses"`
+	Provider          `yaml:"provider"`
+	ValidateResponses bool `yaml:"validate_responses"`
 
 	OpenAI    `yaml:"openai"`
 	Anthropic `yaml:"anthropic"`

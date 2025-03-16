@@ -29,6 +29,8 @@ func main() {
 		log.Fatalf("loading configuration: %v", err)
 	}
 
+	logger := log.Default()
+
 	// Initialize LLM based on configuration.
 	var ai server.ChatCompleter
 	switch cfg.LLM.Provider {
@@ -80,8 +82,8 @@ func main() {
 		log.Fatalf("creating LLM client: %v", err)
 	}
 
-	if cfg.LLM.VerifyResponses {
-		ai = llm.NewVerificator(ai)
+	if cfg.LLM.ValidateResponses {
+		ai = llm.NewValidator(ai, ai, 0, cfg.Telegram.Debug, logger)
 	}
 
 	// Initialize handlers.
@@ -122,7 +124,7 @@ func main() {
 		Storage:             dataStorage,
 		Debug:               cfg.Telegram.Debug,
 		UnsupportedResponse: unsupported,
-		Log:                 log.Default(),
+		Log:                 logger,
 	}
 
 	// Setup context with signal handling.

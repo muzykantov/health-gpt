@@ -19,6 +19,7 @@ storage:
 # LLM provider settings.
 llm:
   provider: openai
+  validate_responses: true
   openai:
     api_key: ${OPENAI_KEY}
     model: gpt-4o

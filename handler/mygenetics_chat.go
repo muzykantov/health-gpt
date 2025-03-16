@@ -96,7 +96,8 @@ func myGeneticsChat() server.Handler {
 
 			done := make(chan struct{})
 			go func() {
-				ticker := time.NewTicker(time.Second)
+				w.WriteResponse(chat.MsgA(content.Typing{}))
+				ticker := time.NewTicker(time.Second * 5)
 				for {
 					select {
 					case <-ticker.C:

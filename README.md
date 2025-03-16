@@ -1,113 +1,113 @@
-# 🧬 Нейроконсультант по здоровью
+# 🧬 Health Neuro Consultant
 
-Телеграм-бот для предоставления персонализированных рекомендаций, основанных на анкетных данных пользователей и результатах их генетического анализа. Бот использует передовые модели искусственного интеллекта для предоставления научно обоснованных советов по образу жизни, питанию и физической активности.
+A Telegram bot that provides personalized recommendations based on user questionnaire data and genetic analysis results. The bot uses advanced artificial intelligence models to deliver scientifically-backed advice on lifestyle, nutrition, and physical activity.
 
-## ✨ Возможности
+## ✨ Features
 
-- Персонализированные рекомендации на основе данных пользователя
-- Интеграция с сервисами генетического тестирования
-- Поддержка нескольких моделей ИИ (OpenAI/Anthropic/DeepSeek/Mistral)
+- Personalized recommendations based on user data
+- Integration with genetic testing services
+- Support for multiple AI models (OpenAI/Anthropic/DeepSeek/Mistral)
 
-## 🛠️ Необходимое ПО
+## 🛠️ Requirements
 
-- Go 1.24 или выше
-- Docker и Docker Compose
-- Токен Telegram Bot
-- Учетные данные сервисов ИИ (OpenAI/Anthropic/DeepSeek/Mistral)
-- Учетные данные API MyGenetics (для тестов)
+- Go 1.24 or higher
+- Docker and Docker Compose
+- Telegram Bot token
+- AI service credentials (OpenAI/Anthropic/DeepSeek/Mistral)
+- MyGenetics API credentials (for testing)
 
-## ⚙️ Конфигурация
+## ⚙️ Configuration
 
-1. Скопируйте примеры конфигурационных файлов:
+1. Copy the example configuration files:
 ```bash
 cp config/example/config.yaml config.yaml
 ```
 
-2. Обновите конфигурационные файлы своими учетными данными:
-- `config.yaml` - Основная конфигурация приложения
+2. Update the configuration files with your credentials:
+- `config.yaml` - Main application configuration
 
-## 📦 Установка
+## 📦 Installation
 
-### Использование Docker
+### Using Docker
 
 ```bash
-# Собрать и запустить сервисы
+# Build and start services
 docker-compose up -d
 
-# Просмотр логов
+# View logs
 docker-compose logs -f
 ```
 
-### Ручная установка
+### Manual Installation
 
 ```bash
-# Установка зависимостей
+# Install dependencies
 go mod download
 
-# Сборка приложения
+# Build the application
 go build -o health-bot ./cmd/bot
 
-# Запуск бота
+# Run the bot
 ./health-bot -config config.yaml
 ```
 
-### 🧪 Запуск тестов
+### 🧪 Running Tests
 
-Для запуска тестов необходимо установить следующие переменные окружения:
+To run tests, you need to set the following environment variables:
 
 ```bash
-# Для тестов OpenAI
+# For OpenAI tests
 export OPENAI_API_KEY=your_api_key
-export OPENAI_SOCKS_PROXY=socks5://user:pass@host:port  # опционально
+export OPENAI_SOCKS_PROXY=socks5://user:pass@host:port  # optional
 
-# Для тестов Anthropic
+# For Anthropic tests
 export ANTHROPIC_API_KEY=your_api_key
-export ANTHROPIC_SOCKS_PROXY=socks5://user:pass@host:port  # опционально
+export ANTHROPIC_SOCKS_PROXY=socks5://user:pass@host:port  # optional
 
-# Для тестов DeepSeek
+# For DeepSeek tests
 export DEEPSEEK_API_KEY=your_api_key
-export DEEPSEEK_SOCKS_PROXY=socks5://user:pass@host:port  # опционально
+export DEEPSEEK_SOCKS_PROXY=socks5://user:pass@host:port  # optional
 
-# Для тестов Mistral
+# For Mistral tests
 export MISTRAL_API_KEY=your_api_key
-export MISTRAL_SOCKS_PROXY=socks5://user:pass@host:port  # опционально
+export MISTRAL_SOCKS_PROXY=socks5://user:pass@host:port  # optional
 
-# Для тестов MyGenetics
+# For MyGenetics tests
 export MYGENETICS_EMAIL=your_email
 export MYGENETICS_PASSWORD=your_password
 ```
 
-После установки переменных запустите тесты:
+After setting the variables, run the tests:
 ```bash
 go test ./...
 ```
 
-## 👥 Участие в разработке
+## 👥 Contributing
 
-1. Сделайте форк репозитория
-2. Создайте ветку для функционала (`git checkout -b feature/amazing-feature`)
-3. Зафиксируйте изменения (`git commit -m 'Add amazing feature'`)
-4. Отправьте ветку в удаленный репозиторий (`git push origin feature/amazing-feature`)
-5. Создайте Pull Request
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Create a Pull Request
 
-## 📄 Лицензия
+## 📄 License
 
-Этот проект распространяется под лицензией MIT - подробности см. в файле LICENSE.
+This project is licensed under the MIT License - see the LICENSE file for details.
 
-## 👨‍💻 Команда
+## 👨‍💻 Team
 
-- [Валерий Полуновский](https://t.me/vvp310792) - Научный руководитель
-- [Ольга Шварева](https://t.me/OlgaShvareva) - Инженер по обработке естественного языка (NLP Engineer)
-- [Дмитрий Громазин](https://t.me/Ekzorcist777) - Менеджер продукта
-- [Елена Губская](https://t.me/helenatroya729) - Инженер по машинному обучению (ML Engineer)
-- [Геннадий Музыкантов](https://t.me/muzykantov) - Биоинформатик, разработчик
+- [Valery Polunovsky](https://t.me/vvp310792) - Scientific Lead
+- [Olga Shvareva](https://t.me/OlgaShvareva) - NLP Engineer
+- [Dmitry Gromazin](https://t.me/Ekzorcist777) - Product Manager
+- [Elena Gubskaya](https://t.me/helenatroya729) - ML Engineer
+- [Gennadii Muzykantov](https://t.me/muzykantov) - Bioinformatician, Developer
 
-## 📞 Контакты
+## 📞 Contact
 
-По вопросам и поддержке обращайтесь:
+For questions and support, please contact:
 - Email: gennadii@muzykantov.me
 - Telegram: https://t.me/muzykantov
 
-## 🤖 Ссылка на бота
+## 🤖 Bot Link
 
 - [HealthNeuroConsultant](https://t.me/HealthNeuroConsultantBot)
