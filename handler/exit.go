@@ -24,7 +24,7 @@ func exit() server.Handler {
 			}
 
 			w.WriteResponse(chat.MsgA("👋 Вы успешно вышли из системы. До новых встреч!"))
-
+			Start().Serve(ctx, w, r)
 		},
 	)
 }
