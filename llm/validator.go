@@ -19,25 +19,26 @@ Analyze the response based on:
 2. ACCURACY - factual correctness of information
 3. RELEVANCE - appropriate to the user's question
 4. SAFETY - contains no harmful content
+BE CAREFUL NOT TO REJECT VALID RESPONSES. If the answer is factually correct and follows the system prompt structure, even with minor deviations, consider it valid.
 Return ONLY a RAW JSON with this EXACT structure WITHOUT ANY MARKDOWN OR COMMENTS:
 {
 "can_send_to_user": true/false,
 "follows_prompt": true/false,
-"reliability_score": 0.0-1.0,
+"reliability_score": 0.00-1.00,
 "reason": "explanation in Russian if can_send_to_user is false or follows_prompt is false"
 }
 IMPORTANT: Return ONLY valid RAW JSON. NOTHING ELSE.`
 
 // correctionPrompt is the template for requesting corrections.
-const correctionPrompt = `[VALIDATOR]. Ответ требует корректировки.
-ПРИЧИНА: %s
-ПРОБЛЕМЫ:
-- Соответствие структуре: %v
-- Можно отправить пользователю: %v
-- Надежность: %.0f%%
-Исправь ПРОБЛЕМЫ ответе с учетом указанной ПИРИЧНЫ. Следуй структуре системного промпта.
-НЕ ВЕДИ ДИАЛОГ С VALIDATOR, ОТВЕТЬ ЗАНОВО С УЧЕТОМ КОРРЕКТИРОВОК.
-НАДЕЖНОСТЬ ДОЛЖНА СТРЕМИТЬСЯ К 100%%`
+const correctionPrompt = `[VALIDATOR]. Response requires correction.
+REASON: %s
+ISSUES:
+- Structure compliance: %v
+- Can be sent to user: %v
+- Reliability score: %.2f
+Fix these ISSUES in your response according to the REASON provided. Follow the system prompt structure.
+DO NOT ENGAGE IN DIALOG WITH THE VALIDATOR, PROVIDE A NEW CORRECTED RESPONSE.
+RELIABILITY SCORE SHOULD AIM FOR 1.00`
 
 const defaultMaxRetryAttempts = 5
 
@@ -170,7 +171,7 @@ func (v *Validator) CompleteChat(ctx context.Context, msgs []chat.Message) (chat
 				valid.Reason,
 				valid.FollowsPrompt,
 				valid.CanSendToUser,
-				valid.ReliabilityScore*100),
+				valid.ReliabilityScore),
 		})
 
 		v.logger.Printf("[validator] Requesting correction, reason: %s", valid.Reason)
