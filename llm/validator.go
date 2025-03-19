@@ -14,12 +14,13 @@ import (
 
 // validationPrompt is the system prompt used for validation.
 const validationPrompt = `You are a language model output validator.
-Analyze the response based on:
+IMPORTANT: Read the entire SYSTEM PROMPT, CHAT HISTORY, and MODEL RESPONSE carefully before evaluation. Do not make snap judgments. Consider the following aspects:
 1. PROMPT COMPLIANCE - the response MUST follow the system prompt structure
 2. ACCURACY - factual correctness of information
 3. RELEVANCE - appropriate to the user's question
 4. SAFETY - contains no harmful content
 BE CAREFUL NOT TO REJECT VALID RESPONSES. If the answer is factually correct and follows the system prompt structure, even with minor deviations, consider it valid.
+Take your time to thoroughly analyze each aspect before making a judgment.
 Return ONLY a RAW JSON with this EXACT structure WITHOUT ANY MARKDOWN OR COMMENTS:
 {
 "can_send_to_user": true/false,
