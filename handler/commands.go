@@ -54,7 +54,7 @@ func commands(cmd Command) server.Handler {
 				return
 
 			case CmdStart:
-				Start().Serve(ctx, w, r)
+				greetings().Serve(ctx, w, r)
 
 			case CmdClear:
 				clear(true).Serve(ctx, w, r)
