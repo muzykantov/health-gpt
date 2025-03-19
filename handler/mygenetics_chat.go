@@ -7,6 +7,7 @@ import (
 
 	"github.com/muzykantov/health-gpt/chat"
 	"github.com/muzykantov/health-gpt/chat/content"
+	"github.com/muzykantov/health-gpt/genetics"
 	"github.com/muzykantov/health-gpt/mygenetics"
 	"github.com/muzykantov/health-gpt/server"
 )
@@ -67,7 +68,7 @@ func myGeneticsChat() server.Handler {
 				return
 			}
 
-			var allFeatures []string
+			var featureSet genetics.FeatureSet
 			for _, codelab := range codelabs {
 				features, err := mygenetics.DefaultClient.FetchFeatures(ctx, access, codelab.Code)
 				if err != nil {
@@ -77,27 +78,24 @@ func myGeneticsChat() server.Handler {
 						codelab.Code, r.ChatID, err)
 					continue
 				}
-				for _, feature := range features {
-					allFeatures = append(allFeatures, feature.String())
-				}
+
+				featureSet = featureSet.MergeWith(features)
 			}
 
 			// Формируем сообщения для AI:
-			// системный промпт в начале + все анализы + история чата + новое сообщение
-			msgs := make([]chat.Message, 0, 1+len(allFeatures)+len(filteredHistory)+1)
+			// системный промпт + признаки + история чата + новое сообщение
+			msgs := make([]chat.Message, 0, 3+len(filteredHistory))
 			msgs = append(msgs, chat.MsgS(myGeneticsChatPrompt))
-			for _, feature := range allFeatures {
-				msgs = append(msgs, chat.MsgU(feature))
-			}
+			msgs = append(msgs, chat.MsgU(featureSet.BuildLLMContext()))
 			msgs = append(msgs, filteredHistory...)
 			msgs = append(msgs, chat.MsgU(msgText))
 
-			// w.WriteResponse(chat.MsgA("🤔 Анализирую ваш вопрос..."))
+			w.WriteResponse(chat.MsgA("🤔 Анализирую ваш вопрос..."))
 
 			done := make(chan struct{})
 			go func() {
 				w.WriteResponse(chat.MsgA(content.Typing{}))
-				ticker := time.NewTicker(time.Second * 5)
+				ticker := time.NewTicker(time.Second * 10)
 				for {
 					select {
 					case <-ticker.C:

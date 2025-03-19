@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/muzykantov/health-gpt/genetics"
 	"github.com/muzykantov/health-gpt/mygenetics/generated"
 )
 
@@ -127,7 +128,7 @@ func (c *Client) FetchFeatures(
 	ctx context.Context,
 	access Token,
 	codeLab string,
-) ([]Feature, error) {
+) (genetics.FeatureSet, error) {
 	const reportURL = BaseURL + "/api/v2/codelabs/%s?includeGenes=true&markerFileKey=ru"
 
 	var codelabResponse generated.CodelabResponse
@@ -141,7 +142,7 @@ func (c *Client) FetchFeatures(
 		return nil, err
 	}
 
-	var features []Feature
+	var features genetics.FeatureSet
 	for featureName := range codelabResponse.Files.Payload.Signs {
 		if conclusion, ok := codelabResponse.Files.Payload.Signs[featureName]["conclusion"]; ok {
 			conclusionData, ok := conclusion.(map[string]any)

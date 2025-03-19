@@ -1,7 +1,7 @@
 package mygenetics
 
-// Codelab представляет анализ MyGenetics.
+// Codelab contains MyGenetics test code.
 type Codelab struct {
-	Code string // Код анализа.
-	Name string // Название анализа.
+	Code string
+	Name string
 }

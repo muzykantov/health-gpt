@@ -50,19 +50,16 @@ func myGeneticsCodelab(code string) server.Handler {
 
 					default:
 						w.WriteResponse(chat.MsgAf("%s\n📑 Показываю результат %d из %d.",
-							feature, i+1, len(features)))
+							feature.ToHTML(), i+1, len(features)))
 					}
 				}
 
 				return
 			}
 
-			msgs := make([]chat.Message, 0, len(features)+1)
+			msgs := make([]chat.Message, 0, 2)
 			msgs = append(msgs, chat.MsgS(MyGeneticsCodelabsPrompt))
-
-			for _, feature := range features {
-				msgs = append(msgs, chat.MsgU(feature.String()))
-			}
+			msgs = append(msgs, chat.MsgU(features.BuildLLMContext()))
 
 			w.WriteResponse(chat.MsgAf("📑 Загружено %d параметров анализа. "+
 				"Приступаю к обработке...", len(features)))

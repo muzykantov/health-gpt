@@ -1,18 +1,29 @@
+// TODO: REFACTOR ME!!!
 package mygenetics
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/muzykantov/health-gpt/genetics"
+)
+
+type Reccommendation struct {
+	Nutrition  []string // Dietary recommendations
+	Additional []string // Additional lifestyle recommendations
+	Checklist  []string // Action items to be completed
+}
 
 func (c *Client) parseWithConclusion(
 	featureName string,
 	featureValue map[string]any,
-) (Feature, error) {
-	feature := Feature{
+) (genetics.Feature, error) {
+	feature := genetics.Feature{
 		Name: featureName,
 	}
 
 	conclusions, ok := featureValue["conclusion"].(map[string]any)
 	if !ok {
-		return Feature{}, fmt.Errorf(
+		return genetics.Feature{}, fmt.Errorf(
 			"%w: %T",
 			ErrUnexpectedType,
 			featureValue["conclusion"],
@@ -21,7 +32,7 @@ func (c *Client) parseWithConclusion(
 
 	fullConclusion, ok := conclusions["conclusion"].([]any)
 	if !ok {
-		return Feature{}, fmt.Errorf(
+		return genetics.Feature{}, fmt.Errorf(
 			"%w: %T",
 			ErrUnexpectedType,
 			conclusions["conclusion"],
@@ -31,7 +42,7 @@ func (c *Client) parseWithConclusion(
 	for _, conclusionItem := range fullConclusion {
 		conclusionStr, ok := conclusionItem.(string)
 		if !ok {
-			return Feature{}, fmt.Errorf(
+			return genetics.Feature{}, fmt.Errorf(
 				"%w: %T",
 				ErrUnexpectedType,
 				conclusionItem,
@@ -47,7 +58,7 @@ func (c *Client) parseWithConclusion(
 
 	genes, ok := featureValue["genes"].(map[string]any)
 	if !ok {
-		return Feature{}, fmt.Errorf(
+		return genetics.Feature{}, fmt.Errorf(
 			"%w: %T",
 			ErrUnexpectedType,
 			featureValue["genes"],
@@ -57,24 +68,29 @@ func (c *Client) parseWithConclusion(
 	var err error
 
 	if feature.Genes, err = c.parseGenes(genes); err != nil {
-		return Feature{}, err
+		return genetics.Feature{}, err
 	}
 
 	recommendation, ok := featureValue["recommendation"].(map[string]any)
 	if !ok {
-		return Feature{}, fmt.Errorf(
+		return genetics.Feature{}, fmt.Errorf(
 			"%w: %T",
 			ErrUnexpectedType,
 			featureValue["recommendation"],
 		)
 	}
 
-	if feature.Recommendation, err = c.parseRecommendation(
+	r, err := c.parseRecommendation(
 		recommendation,
 		false,
-	); err != nil {
-		return Feature{}, err
+	)
+	if err != nil {
+		return genetics.Feature{}, err
 	}
+
+	feature.Nutrition = r.Nutrition
+	feature.Additional = r.Additional
+	feature.Checklist = r.Checklist
 
 	return feature, nil
 }
@@ -82,14 +98,14 @@ func (c *Client) parseWithConclusion(
 func (c *Client) parseWithoutConclusion(
 	featureName string,
 	featureValue map[string]any,
-) (Feature, error) {
-	feature := Feature{
+) (genetics.Feature, error) {
+	feature := genetics.Feature{
 		Name: featureName,
 	}
 
 	conclusion, ok := featureValue["conclusion"].(string)
 	if !ok {
-		return Feature{}, fmt.Errorf(
+		return genetics.Feature{}, fmt.Errorf(
 			"%w: %T",
 			ErrUnexpectedType,
 			featureValue["conclusion"],
@@ -108,7 +124,7 @@ func (c *Client) parseWithoutConclusion(
 
 	genes, ok := featureValue["genes"].(map[string]any)
 	if !ok {
-		return Feature{}, fmt.Errorf(
+		return genetics.Feature{}, fmt.Errorf(
 			"%w: %T",
 			ErrUnexpectedType,
 			featureValue["genes"],
@@ -118,30 +134,35 @@ func (c *Client) parseWithoutConclusion(
 	var err error
 
 	if feature.Genes, err = c.parseGenes(genes); err != nil {
-		return Feature{}, err
+		return genetics.Feature{}, err
 	}
 
 	recommendation, ok := featureValue["recommendation"].(map[string]any)
 	if !ok {
-		return Feature{}, fmt.Errorf(
+		return genetics.Feature{}, fmt.Errorf(
 			"%w: %T",
 			ErrUnexpectedType,
 			featureValue["recommendation"],
 		)
 	}
 
-	if feature.Recommendation, err = c.parseRecommendation(
+	r, err := c.parseRecommendation(
 		recommendation,
 		true,
-	); err != nil {
-		return Feature{}, err
+	)
+	if err != nil {
+		return genetics.Feature{}, err
 	}
+
+	feature.Nutrition = r.Nutrition
+	feature.Additional = r.Additional
+	feature.Checklist = r.Checklist
 
 	return feature, nil
 }
 
-func (c *Client) parseGenes(genes map[string]any) ([]Gene, error) {
-	parsedGenes := make([]Gene, 0, len(genes))
+func (c *Client) parseGenes(genes map[string]any) ([]genetics.Gene, error) {
+	parsedGenes := make([]genetics.Gene, 0, len(genes))
 
 	for geneName, gene := range genes {
 		geneValue, ok := gene.(map[string]any)
@@ -158,7 +179,7 @@ func (c *Client) parseGenes(genes map[string]any) ([]Gene, error) {
 			)
 		}
 
-		interpretation := make([]string, 0, len(interpretations))
+		interpretationsStr := make([]string, 0, len(interpretations))
 		for _, interpretationItem := range interpretations {
 			item, ok := interpretationItem.(string)
 			if !ok {
@@ -173,16 +194,16 @@ func (c *Client) parseGenes(genes map[string]any) ([]Gene, error) {
 				continue
 			}
 
-			interpretation = append(interpretation, item)
+			interpretationsStr = append(interpretationsStr, item)
 		}
 
-		if len(interpretation) == 0 {
+		if len(interpretationsStr) == 0 {
 			continue
 		}
 
-		parsedGenes = append(parsedGenes, Gene{
-			Name:           geneName,
-			Interpretation: interpretation,
+		parsedGenes = append(parsedGenes, genetics.Gene{
+			Name:            geneName,
+			Interpretations: interpretationsStr,
 		})
 	}
 
