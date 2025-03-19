@@ -10,15 +10,7 @@ import (
 	"github.com/muzykantov/health-gpt/server"
 )
 
-type CodelabsCommand string
-
-const (
-	CmdUnspecified  CodelabsCommand = ""
-	CmdMyGenetics   CodelabsCommand = "mygenetics"
-	CmdMyGeneticsAI CodelabsCommand = "mygenetics_ai"
-)
-
-func myGeneticsCodelabs(cmd CodelabsCommand) server.Handler {
+func myGeneticsCodelabs(cmd Command) server.Handler {
 	return server.HandlerFunc(
 		func(ctx context.Context, w server.ResponseWriter, r *server.Request) {
 			access := mygenetics.AccessToken(r.From.Tokens)

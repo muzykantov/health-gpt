@@ -14,7 +14,7 @@ import (
 //go:embed prompts/auth.txt
 var AuthPrompt string
 
-func Auth(next server.Handler) server.Handler {
+func auth(next server.Handler) server.Handler {
 	return server.HandlerFunc(
 		func(ctx context.Context, w server.ResponseWriter, r *server.Request) {
 			// Если токен не истек, то пользователь авторизован, передаем запрос дальше.

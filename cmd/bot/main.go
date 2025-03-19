@@ -86,12 +86,6 @@ func main() {
 		ai = llm.NewValidator(ai, ai, 0, cfg.Telegram.Debug, logger)
 	}
 
-	// Initialize handlers.
-	var (
-		myGeneticsHandler = handler.MyGenetics()
-		authHandler       = handler.Auth(myGeneticsHandler)
-	)
-
 	var dataStorage server.DataStorage
 	switch cfg.Storage.Type {
 	case config.TypeFS:
@@ -119,7 +113,7 @@ func main() {
 	// Create and configure the server.
 	srv := &telegram.Server{
 		Token:               cfg.Telegram.Token,
-		Handler:             authHandler,
+		Handler:             handler.Start(),
 		Completion:          ai,
 		Storage:             dataStorage,
 		Debug:               cfg.Telegram.Debug,
