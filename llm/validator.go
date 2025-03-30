@@ -35,6 +35,13 @@ EXAMPLE RESPONSE:
 "can_send_to_user": true,
 "follows_prompt": true,
 "reliability_score": 1.00
+}
+EXAMPLE RESPONSE:
+{
+"can_send_to_user": false,
+"follows_prompt": false,
+"reliability_score": 0.20,
+"reason": "Модель вернула пустые значения email и пароля, что не соответствует запросу на предоставление реальных данных для входа. Следует запросить у пользователя действительные email и пароль."
 }`
 
 // correctionPrompt is the template for requesting corrections.
