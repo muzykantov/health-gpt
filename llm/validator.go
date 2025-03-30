@@ -29,7 +29,13 @@ Return ONLY a RAW JSON with this EXACT structure WITHOUT ANY MARKDOWN OR COMMENT
 "reliability_score": 0.00-1.00,
 "reason": "explanation in Russian if can_send_to_user is false or follows_prompt is false"
 }
-IMPORTANT: Return ONLY valid RAW JSON. NOTHING ELSE. WITHOUT MARKDOWN OR ANY QUOTES.`
+IMPORTANT: Return ONLY valid RAW JSON. NOTHING ELSE.
+EXAMPLE RESPONSE:
+{
+"can_send_to_user": true,
+"follows_prompt": true,
+"reliability_score": 1.00
+}`
 
 // correctionPrompt is the template for requesting corrections.
 const correctionPrompt = `[VALIDATOR]. Response requires correction.
