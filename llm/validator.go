@@ -29,20 +29,7 @@ Return ONLY a RAW JSON with this EXACT structure WITHOUT ANY MARKDOWN OR COMMENT
 "reliability_score": 0.00-1.00,
 "reason": "explanation in Russian if can_send_to_user is false or follows_prompt is false"
 }
-IMPORTANT: Return ONLY valid RAW JSON. NOTHING ELSE.
-EXAMPLE RESPONSE:
-{
-"can_send_to_user": true,
-"follows_prompt": true,
-"reliability_score": 1.00
-}
-EXAMPLE RESPONSE:
-{
-"can_send_to_user": false,
-"follows_prompt": false,
-"reliability_score": 0.20,
-"reason": "Модель вернула пустые значения email и пароля, что не соответствует запросу на предоставление реальных данных для входа. Следует запросить у пользователя действительные email и пароль."
-}`
+IMPORTANT: Return ONLY valid RAW JSON. NOTHING ELSE.`
 
 // correctionPrompt is the template for requesting corrections.
 const correctionPrompt = `[VALIDATOR]. Response requires correction.
@@ -283,6 +270,9 @@ func (v *Validator) validateResponse(ctx context.Context, originalMsgs []chat.Me
 		v.logger.Printf("[validator] Unexpected validation response type: %T", validationResponse.Content)
 		return nil, ErrInvalidValidation
 	}
+
+	content = strings.ReplaceAll(content, "`", "")
+	content = strings.ReplaceAll(content, "json", "")
 
 	var result ValidationResult
 	if err := json.Unmarshal([]byte(content), &result); err != nil {
