@@ -6,8 +6,10 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"time"
 
 	"github.com/muzykantov/health-gpt/chat"
+	"github.com/muzykantov/health-gpt/metrics"
 	"github.com/openai/openai-go"
 	"github.com/openai/openai-go/option"
 	"golang.org/x/net/proxy"
@@ -24,7 +26,8 @@ type OpenAIOption func(*OpenAI)
 
 // OpenAI implements a client for interacting with OpenAI.
 type OpenAI struct {
-	client *openai.Client
+	client openai.Client
+
 	// Configuration parameters.
 	model       openai.ChatModel // Model to use.
 	temperature float64          // Generation temperature (0.0-2.0).
@@ -134,10 +137,19 @@ func NewOpenAI(apiKey string, opts ...OpenAIOption) (*OpenAI, error) {
 
 // CompleteChat implements the Completion interface.
 func (c *OpenAI) CompleteChat(ctx context.Context, msgs []chat.Message) (chat.Message, error) {
+	var (
+		start     = time.Now()
+		provider  = "openai"
+		status    = "success"
+		modelName = string(c.model)
+	)
+
 	openAIMessages := make([]openai.ChatCompletionMessageParamUnion, len(msgs))
 	for i, msg := range msgs {
 		content, ok := msg.Content.(string)
 		if !ok {
+			status = "type_error"
+			metrics.ObserveRequestDuration(provider, modelName, status, time.Since(start))
 			return chat.EmptyMessage, fmt.Errorf(
 				"%w: %T",
 				ErrOpenAIUnsupportedContentType,
@@ -154,6 +166,8 @@ func (c *OpenAI) CompleteChat(ctx context.Context, msgs []chat.Message) (chat.Me
 		case chat.RoleAssistant:
 			message = openai.AssistantMessage(content)
 		default:
+			status = "role_error"
+			metrics.ObserveRequestDuration(provider, modelName, status, time.Since(start))
 			return chat.EmptyMessage, fmt.Errorf(
 				"%w: %v",
 				ErrOpenAIUnsupportedRole,
@@ -167,14 +181,16 @@ func (c *OpenAI) CompleteChat(ctx context.Context, msgs []chat.Message) (chat.Me
 	chatCompletion, err := c.client.Chat.Completions.New(
 		ctx,
 		openai.ChatCompletionNewParams{
-			Model:               openai.F(c.model),
-			Messages:            openai.F(openAIMessages),
+			Model:               c.model,
+			Messages:            openAIMessages,
 			Temperature:         openai.Float(c.temperature),
 			TopP:                openai.Float(c.topP),
 			MaxCompletionTokens: openai.Int(c.maxTokens),
 		},
 	)
 	if err != nil {
+		status = "api_error"
+		metrics.ObserveRequestDuration(provider, modelName, status, time.Since(start))
 		return chat.EmptyMessage, fmt.Errorf(
 			"%w: chatgpt request failed: %w",
 			ErrOpenAIRequestFailed,
@@ -183,11 +199,16 @@ func (c *OpenAI) CompleteChat(ctx context.Context, msgs []chat.Message) (chat.Me
 	}
 
 	if len(chatCompletion.Choices) == 0 {
+		status = "empty_response"
+		metrics.ObserveRequestDuration(provider, modelName, status, time.Since(start))
 		return chat.EmptyMessage, fmt.Errorf(
 			"%w: no choices in response",
 			ErrOpenAIRequestFailed,
 		)
 	}
+
+	metrics.ObserveRequestDuration(provider, modelName, status, time.Since(start))
+	metrics.AddTokens(provider, modelName, int(chatCompletion.Usage.PromptTokens), int(chatCompletion.Usage.CompletionTokens))
 
 	return chat.Message{
 		Sender:  chat.RoleAssistant,

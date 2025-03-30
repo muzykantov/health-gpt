@@ -8,8 +8,10 @@ import (
 	"net"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/muzykantov/health-gpt/chat"
+	"github.com/muzykantov/health-gpt/metrics"
 	"golang.org/x/net/proxy"
 )
 
@@ -25,6 +27,7 @@ type MistralOption func(*Mistral)
 // Mistral implements a client for interacting with Mistral API.
 type Mistral struct {
 	client *http.Client
+
 	// Configuration parameters.
 	model       string  // Model to use.
 	temperature float64 // Generation temperature (0.0-1.5).
@@ -165,10 +168,18 @@ type MistralResponse struct {
 
 // CompleteChat implements the Completion interface.
 func (c *Mistral) CompleteChat(ctx context.Context, msgs []chat.Message) (chat.Message, error) {
+	var (
+		start    = time.Now()
+		provider = "mistral"
+		status   = "success"
+	)
+
 	mistralMessages := make([]MistralMessage, len(msgs))
 	for i, msg := range msgs {
 		content, ok := msg.Content.(string)
 		if !ok {
+			status = "type_error"
+			metrics.ObserveRequestDuration(provider, c.model, status, time.Since(start))
 			return chat.EmptyMessage, fmt.Errorf(
 				"%w: %T",
 				ErrMistralUnsupportedContentType,
@@ -185,6 +196,8 @@ func (c *Mistral) CompleteChat(ctx context.Context, msgs []chat.Message) (chat.M
 		case chat.RoleAssistant:
 			role = "assistant"
 		default:
+			status = "role_error"
+			metrics.ObserveRequestDuration(provider, c.model, status, time.Since(start))
 			return chat.EmptyMessage, fmt.Errorf(
 				"%w: %v",
 				ErrMistralUnsupportedRole,
@@ -214,6 +227,8 @@ func (c *Mistral) CompleteChat(ctx context.Context, msgs []chat.Message) (chat.M
 
 	requestBody, err := json.Marshal(request)
 	if err != nil {
+		status = "marshal_error"
+		metrics.ObserveRequestDuration(provider, c.model, status, time.Since(start))
 		return chat.EmptyMessage, fmt.Errorf("failed to marshal request: %w", err)
 	}
 
@@ -224,6 +239,8 @@ func (c *Mistral) CompleteChat(ctx context.Context, msgs []chat.Message) (chat.M
 		strings.NewReader(string(requestBody)),
 	)
 	if err != nil {
+		status = "request_create_error"
+		metrics.ObserveRequestDuration(provider, c.model, status, time.Since(start))
 		return chat.EmptyMessage, fmt.Errorf("failed to create request: %w", err)
 	}
 
@@ -233,11 +250,16 @@ func (c *Mistral) CompleteChat(ctx context.Context, msgs []chat.Message) (chat.M
 
 	resp, err := c.client.Do(req)
 	if err != nil {
+		status = "network_error"
+		metrics.ObserveRequestDuration(provider, c.model, status, time.Since(start))
 		return chat.EmptyMessage, fmt.Errorf("%w: %v", ErrMistralRequestFailed, err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
+		status = fmt.Sprintf("http_%d", resp.StatusCode)
+		metrics.ObserveRequestDuration(provider, c.model, status, time.Since(start))
+
 		var errorResponse struct {
 			Error struct {
 				Message string `json:"message"`
@@ -264,15 +286,22 @@ func (c *Mistral) CompleteChat(ctx context.Context, msgs []chat.Message) (chat.M
 
 	var response MistralResponse
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+		status = "decode_error"
+		metrics.ObserveRequestDuration(provider, c.model, status, time.Since(start))
 		return chat.EmptyMessage, fmt.Errorf("failed to decode response: %w", err)
 	}
 
 	if len(response.Choices) == 0 {
+		status = "empty_response"
+		metrics.ObserveRequestDuration(provider, c.model, status, time.Since(start))
 		return chat.EmptyMessage, fmt.Errorf(
 			"%w: no choices in response",
 			ErrMistralRequestFailed,
 		)
 	}
+
+	metrics.ObserveRequestDuration(provider, c.model, status, time.Since(start))
+	metrics.AddTokens(provider, c.model, response.Usage.PromptTokens, response.Usage.CompletionTokens)
 
 	return chat.Message{
 		Sender:  chat.RoleAssistant,

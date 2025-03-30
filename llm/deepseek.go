@@ -8,8 +8,10 @@ import (
 	"net"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/muzykantov/health-gpt/chat"
+	"github.com/muzykantov/health-gpt/metrics"
 	"golang.org/x/net/proxy"
 )
 
@@ -163,10 +165,18 @@ type DeepSeekResponse struct {
 
 // CompleteChat implements the Completion interface.
 func (c *DeepSeek) CompleteChat(ctx context.Context, msgs []chat.Message) (chat.Message, error) {
+	var (
+		start    = time.Now()
+		provider = "deepseek"
+		status   = "success"
+	)
+
 	deepseekMessages := make([]DeepSeekMessage, len(msgs))
 	for i, msg := range msgs {
 		content, ok := msg.Content.(string)
 		if !ok {
+			status = "type_error"
+			metrics.ObserveRequestDuration(provider, c.model, status, time.Since(start))
 			return chat.EmptyMessage, fmt.Errorf(
 				"%w: %T",
 				ErrDeepSeekUnsupportedContentType,
@@ -183,6 +193,8 @@ func (c *DeepSeek) CompleteChat(ctx context.Context, msgs []chat.Message) (chat.
 		case chat.RoleAssistant:
 			role = "assistant"
 		default:
+			status = "role_error"
+			metrics.ObserveRequestDuration(provider, c.model, status, time.Since(start))
 			return chat.EmptyMessage, fmt.Errorf(
 				"%w: %v",
 				ErrDeepSeekUnsupportedRole,
@@ -208,6 +220,8 @@ func (c *DeepSeek) CompleteChat(ctx context.Context, msgs []chat.Message) (chat.
 
 	requestBody, err := json.Marshal(request)
 	if err != nil {
+		status = "marshal_error"
+		metrics.ObserveRequestDuration(provider, c.model, status, time.Since(start))
 		return chat.EmptyMessage, fmt.Errorf("failed to marshal request: %w", err)
 	}
 
@@ -218,6 +232,8 @@ func (c *DeepSeek) CompleteChat(ctx context.Context, msgs []chat.Message) (chat.
 		strings.NewReader(string(requestBody)),
 	)
 	if err != nil {
+		status = "request_create_error"
+		metrics.ObserveRequestDuration(provider, c.model, status, time.Since(start))
 		return chat.EmptyMessage, fmt.Errorf("failed to create request: %w", err)
 	}
 
@@ -227,11 +243,16 @@ func (c *DeepSeek) CompleteChat(ctx context.Context, msgs []chat.Message) (chat.
 
 	resp, err := c.client.Do(req)
 	if err != nil {
+		status = "network_error"
+		metrics.ObserveRequestDuration(provider, c.model, status, time.Since(start))
 		return chat.EmptyMessage, fmt.Errorf("%w: %v", ErrDeepSeekRequestFailed, err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
+		status = fmt.Sprintf("http_%d", resp.StatusCode)
+		metrics.ObserveRequestDuration(provider, c.model, status, time.Since(start))
+
 		var errorResponse struct {
 			Error struct {
 				Message string `json:"message"`
@@ -258,15 +279,22 @@ func (c *DeepSeek) CompleteChat(ctx context.Context, msgs []chat.Message) (chat.
 
 	var response DeepSeekResponse
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+		status = "decode_error"
+		metrics.ObserveRequestDuration(provider, c.model, status, time.Since(start))
 		return chat.EmptyMessage, fmt.Errorf("failed to decode response: %w", err)
 	}
 
 	if len(response.Choices) == 0 {
+		status = "empty_response"
+		metrics.ObserveRequestDuration(provider, c.model, status, time.Since(start))
 		return chat.EmptyMessage, fmt.Errorf(
 			"%w: no choices in response",
 			ErrDeepSeekRequestFailed,
 		)
 	}
+
+	metrics.ObserveRequestDuration(provider, c.model, status, time.Since(start))
+	metrics.AddTokens(provider, c.model, response.Usage.PromptTokens, response.Usage.CompletionTokens)
 
 	return chat.Message{
 		Sender:  chat.RoleAssistant,

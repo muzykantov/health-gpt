@@ -12,6 +12,7 @@ import (
 	"github.com/muzykantov/health-gpt/config"
 	"github.com/muzykantov/health-gpt/handler"
 	"github.com/muzykantov/health-gpt/llm"
+	"github.com/muzykantov/health-gpt/metrics"
 	"github.com/muzykantov/health-gpt/server"
 	"github.com/muzykantov/health-gpt/server/telegram"
 )
@@ -31,10 +32,31 @@ func main() {
 
 	logger := log.Default()
 
+	// Start metrics server if enabled.
+	var metricsServer *metrics.Server
+	if cfg.Metrics.Enabled {
+		metricsAddress := cfg.Metrics.Address
+		if metricsAddress == "" {
+			metricsAddress = ":9090" // default value
+		}
+
+		metricsServer = metrics.NewServer(metricsAddress, logger)
+		go func() {
+			logger.Printf("Starting metrics server on %s", metricsAddress)
+			if err := metricsServer.Start(); err != nil {
+				logger.Printf("Metrics server error: %v", err)
+			}
+		}()
+	}
+
 	// Initialize LLM based on configuration.
-	var ai server.ChatCompleter
+	var (
+		ai    server.ChatCompleter
+		model string
+	)
 	switch cfg.LLM.Provider {
 	case config.ProviderOpenAI:
+		model = cfg.LLM.OpenAI.Model
 		ai, err = llm.NewOpenAI(
 			cfg.LLM.OpenAI.APIKey,
 			llm.OpenAIWithTemperature(cfg.LLM.OpenAI.Temperature),
@@ -45,16 +67,18 @@ func main() {
 			llm.OpenAIWithBaseURL(cfg.LLM.OpenAI.BaseURL),
 		)
 	case config.ProviderAnthropic:
+		model = cfg.LLM.Anthropic.Model
 		ai, err = llm.NewAnthropic(
-			cfg.LLM.Mistral.APIKey,
-			llm.AnthropicWithTemperature(cfg.LLM.Mistral.Temperature),
-			llm.AnthropicWithModel(cfg.LLM.Mistral.Model),
-			llm.AnthropicWithTopP(cfg.LLM.Mistral.TopP),
-			llm.AnthropicWithMaxTokens(cfg.LLM.Mistral.MaxTokens),
-			llm.AnthropicWithSocksProxy(cfg.LLM.Mistral.SocksProxy),
-			llm.AnthropicWithBaseURL(cfg.LLM.Mistral.BaseURL),
+			cfg.LLM.Anthropic.APIKey,
+			llm.AnthropicWithTemperature(cfg.LLM.Anthropic.Temperature),
+			llm.AnthropicWithModel(cfg.LLM.Anthropic.Model),
+			llm.AnthropicWithTopP(cfg.LLM.Anthropic.TopP),
+			llm.AnthropicWithMaxTokens(cfg.LLM.Anthropic.MaxTokens),
+			llm.AnthropicWithSocksProxy(cfg.LLM.Anthropic.SocksProxy),
+			llm.AnthropicWithBaseURL(cfg.LLM.Anthropic.BaseURL),
 		)
 	case config.ProviderDeepSeek:
+		model = cfg.LLM.DeepSeek.Model
 		ai, err = llm.NewDeepSeek(
 			cfg.LLM.DeepSeek.APIKey,
 			llm.DeepSeekWithTemperature(cfg.LLM.DeepSeek.Temperature),
@@ -65,6 +89,7 @@ func main() {
 			llm.DeepSeekWithBaseURL(cfg.LLM.DeepSeek.BaseURL),
 		)
 	case config.ProviderMistral:
+		model = cfg.LLM.Mistral.Model
 		ai, err = llm.NewMistral(
 			cfg.LLM.Mistral.APIKey,
 			llm.MistralWithTemperature(cfg.LLM.Mistral.Temperature),
@@ -83,7 +108,15 @@ func main() {
 	}
 
 	if cfg.LLM.ValidateResponses {
-		ai = llm.NewValidator(ai, ai, 0, cfg.Telegram.Debug, logger)
+		ai = llm.NewValidator(
+			ai,
+			ai,
+			string(cfg.LLM.Provider), model,
+			string(cfg.LLM.Provider), model,
+			0, // default value
+			cfg.Telegram.Debug,
+			logger,
+		)
 	}
 
 	var dataStorage server.DataStorage
@@ -132,5 +165,12 @@ func main() {
 	// Start the server.
 	if err := srv.ListenAndServe(ctx); err != nil {
 		log.Fatalf("starting server: %v", err)
+	}
+
+	// Gracefully shutdown metrics server if it was started
+	if metricsServer != nil {
+		if err := metricsServer.Shutdown(context.Background()); err != nil {
+			logger.Printf("Error shutting down metrics server: %v", err)
+		}
 	}
 }

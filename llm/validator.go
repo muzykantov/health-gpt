@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/muzykantov/health-gpt/chat"
+	"github.com/muzykantov/health-gpt/metrics"
 )
 
 // validationPrompt is the system prompt used for validation.
@@ -67,12 +68,24 @@ type Validator struct {
 	maxRetry  int           // Maximum number of retry attempts
 	debug     bool          // Append validation results to all responses
 	logger    *log.Logger   // Logger for validation operations
+
+	// Model information for metrics
+	modelProvider string // Provider of the model (e.g., anthropic, openai)
+	modelName     string // Name of the model (e.g., claude-3-sonnet)
+
+	// Validator model information
+	validatorProvider string // Provider of the validator model
+	validatorName     string // Name of the validator model
 }
 
-// NewValidator returns an initialized validator.
+// NewValidator returns an initialized validator with required model info for metrics.
 func NewValidator(
-	model,
+	model ChatCompleter,
 	validator ChatCompleter,
+	modelProvider string,
+	modelName string,
+	validatorProvider string,
+	validatorName string,
 	maxRetry int,
 	debug bool,
 	logger *log.Logger,
@@ -86,20 +99,26 @@ func NewValidator(
 	}
 
 	return &Validator{
-		model:     model,
-		validator: validator,
-		maxRetry:  maxRetry,
-		debug:     debug,
-		logger:    logger,
+		model:             model,
+		validator:         validator,
+		maxRetry:          maxRetry,
+		debug:             debug,
+		logger:            logger,
+		modelProvider:     modelProvider,
+		modelName:         modelName,
+		validatorProvider: validatorProvider,
+		validatorName:     validatorName,
 	}
 }
 
 // CompleteChat requests a response from LLM and validates the result.
 func (v *Validator) CompleteChat(ctx context.Context, msgs []chat.Message) (chat.Message, error) {
 	var (
+		start          = time.Now()
+		correctionMsgs = make([]chat.Message, len(msgs))
+		retryCount     = 0
 		response       chat.Message
 		err            error
-		correctionMsgs = make([]chat.Message, len(msgs))
 	)
 
 	copy(correctionMsgs, msgs)
@@ -108,6 +127,9 @@ func (v *Validator) CompleteChat(ctx context.Context, msgs []chat.Message) (chat
 	response, err = v.model.CompleteChat(ctx, correctionMsgs)
 	if err != nil {
 		v.logger.Printf("[validator] Error getting model response: %v", err)
+
+		metrics.ObserveValidationDuration(v.modelProvider, v.modelName, "initial_error", time.Since(start))
+
 		return chat.EmptyMessage, err
 	}
 
@@ -143,6 +165,8 @@ func (v *Validator) CompleteChat(ctx context.Context, msgs []chat.Message) (chat
 		v.logger.Printf("[validator] Result: send=%v, follows=%v, score=%.2f",
 			valid.CanSendToUser, valid.FollowsPrompt, valid.ReliabilityScore)
 
+		metrics.ObserveValidationScore(v.modelProvider, v.modelName, valid.ReliabilityScore)
+
 		isJSON := json.Valid([]byte(content))
 
 		// If response is valid, return it
@@ -152,6 +176,10 @@ func (v *Validator) CompleteChat(ctx context.Context, msgs []chat.Message) (chat
 					valid.ReliabilityScore*100)
 				response.Content = content + notification
 			}
+
+			metrics.ObserveValidationRetries(v.modelProvider, v.modelName, retryCount)
+			metrics.ObserveValidationDuration(v.modelProvider, v.modelName, "success", time.Since(start))
+
 			return response, nil
 		}
 
@@ -162,6 +190,10 @@ func (v *Validator) CompleteChat(ctx context.Context, msgs []chat.Message) (chat
 					valid.ReliabilityScore*100, valid.Reason)
 				response.Content = content + warning
 			}
+
+			metrics.ObserveValidationRetries(v.modelProvider, v.modelName, retryCount)
+			metrics.ObserveValidationDuration(v.modelProvider, v.modelName, "max_retries", time.Since(start))
+
 			return response, nil
 		}
 
@@ -176,6 +208,7 @@ func (v *Validator) CompleteChat(ctx context.Context, msgs []chat.Message) (chat
 		})
 
 		v.logger.Printf("[validator] Requesting correction, reason: %s", valid.Reason)
+		retryCount++
 
 		// Get corrected response for next iteration
 		response, err = v.model.CompleteChat(ctx, correctionMsgs)
@@ -227,12 +260,14 @@ func (v *Validator) validateResponse(ctx context.Context, originalMsgs []chat.Me
 	// Get validation from the validator model
 	validationResponse, err := v.validator.CompleteChat(ctx, validationMsgs)
 	if err != nil {
+		v.logger.Printf("[validator] Validator request failed: %v", err)
 		return nil, err
 	}
 
 	// Parse validation result
 	content, ok := validationResponse.Content.(string)
 	if !ok {
+		v.logger.Printf("[validator] Unexpected validation response type: %T", validationResponse.Content)
 		return nil, ErrInvalidValidation
 	}
 

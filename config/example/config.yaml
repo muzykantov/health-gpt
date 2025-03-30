@@ -16,6 +16,12 @@ storage:
   bolt:
     path: ./data/health-gpt.db
 
+# Metrics configuration.
+metrics:
+  enabled: true
+  address: ":8080"  # Address to serve metrics (Prometheus endpoint)
+  prefix: "health_gpt"  # Optional prefix for all metrics
+
 # LLM provider settings.
 llm:
   provider: openai

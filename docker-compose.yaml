@@ -8,7 +8,53 @@ services:
     volumes:
       - ./config.yaml:/app/config.yaml:ro
       - health_gpt_data:/app/data
+    networks:
+      - health_gpt_network
+    ports:
+      - "9090:9090"  # Port for metrics
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: health-gpt-prometheus
+    restart: unless-stopped
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    ports:
+      - "9091:9090"  # Prometheus web UI
+    networks:
+      - health_gpt_network
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: health-gpt-grafana
+    restart: unless-stopped
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    ports:
+      - "3000:3000"  # Grafana web UI
+    networks:
+      - health_gpt_network
+
+networks:
+  health_gpt_network:
+    name: health_gpt_network
 
 volumes:
   health_gpt_data:
     name: health_gpt_data
+  prometheus_data:
+    name: health_gpt_prometheus_data
+  grafana_data:
+    name: health_gpt_grafana_data

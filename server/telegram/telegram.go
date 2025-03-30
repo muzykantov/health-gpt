@@ -5,16 +5,19 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"sync"
+	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/muzykantov/health-gpt/chat"
 	"github.com/muzykantov/health-gpt/chat/content"
 	"github.com/muzykantov/health-gpt/chat/storage"
 	"github.com/muzykantov/health-gpt/llm"
+	"github.com/muzykantov/health-gpt/metrics"
 	"github.com/muzykantov/health-gpt/server"
 )
 
-// Определяем основные ошибки при работе с Telegram API.
+// Main Telegram API errors
 var (
 	ErrTelegramTokenNotProvided       = errors.New("telegram token not provided")
 	ErrTelegramLLMNotProvided         = errors.New("telegram llm not provided")
@@ -22,7 +25,7 @@ var (
 	ErrTelegramInvalidMessageContent  = errors.New("telegram invalid message content")
 )
 
-// Server управляет взаимодействием с Server Bot API.
+// Server manages interaction with Telegram Bot API
 type Server struct {
 	Token               string
 	Handler             server.Handler
@@ -31,13 +34,20 @@ type Server struct {
 	Debug               bool
 	UnsupportedResponse func() chat.Message
 	Log                 *log.Logger
+
+	// For tracking active users
+	activeUsers   map[int64]bool
+	activeUsersMu sync.Mutex
 }
 
-// ListenAndServe запускает основной цикл обработки сообщений.
+// ListenAndServe starts the main message processing loop
 func (t *Server) ListenAndServe(ctx context.Context) error {
 	if t.Token == "" {
 		return ErrTelegramTokenNotProvided
 	}
+
+	// Initialize active users tracker
+	t.activeUsers = make(map[int64]bool)
 
 	chatCompletion := t.Completion
 	if chatCompletion == nil {
@@ -75,6 +85,7 @@ func (t *Server) ListenAndServe(ctx context.Context) error {
 				t.UnsupportedResponse(),
 			); err != nil {
 				logger.Printf("failed to send unsupported message response: %v", err)
+				metrics.RecordTelegramError("unsupported_response")
 			}
 		}
 	}
@@ -94,10 +105,11 @@ func (t *Server) ListenAndServe(ctx context.Context) error {
 			}
 
 			var (
-				incoming chat.Message
-				chatID   int64
-				sender   *tgbotapi.User
-				err      error
+				incoming    chat.Message
+				chatID      int64
+				sender      *tgbotapi.User
+				err         error
+				messageType string
 			)
 
 			switch {
@@ -107,10 +119,13 @@ func (t *Server) ListenAndServe(ctx context.Context) error {
 
 				if update.Message.Text == "" {
 					unsupported(update.Message.Chat.ID)
+					metrics.RecordTelegramMessage("unsupported")
 					continue
 				}
 
 				if update.Message.IsCommand() {
+					messageType = "command"
+					metrics.RecordTelegramMessage("command")
 					incoming = chat.Message{
 						Sender: chat.RoleUser,
 						Content: content.Command{
@@ -120,6 +135,8 @@ func (t *Server) ListenAndServe(ctx context.Context) error {
 						CreatedAt: chat.Now().UTC(),
 					}
 				} else {
+					messageType = "text"
+					metrics.RecordTelegramMessage("text")
 					incoming = chat.Message{
 						Sender:    chat.RoleUser,
 						Content:   update.Message.Text,
@@ -132,6 +149,8 @@ func (t *Server) ListenAndServe(ctx context.Context) error {
 				update.CallbackQuery.Message.Chat != nil:
 				sender = update.CallbackQuery.From
 				chatID = update.CallbackQuery.Message.Chat.ID
+				messageType = "callback"
+				metrics.RecordTelegramMessage("callback")
 
 				var caption string
 				if update.CallbackQuery.Message.ReplyMarkup != nil {
@@ -164,13 +183,29 @@ func (t *Server) ListenAndServe(ctx context.Context) error {
 
 			default:
 				logger.Printf("unsupported update: %v", update)
+				metrics.RecordTelegramMessage("unknown")
 				continue
 			}
+
+			// Track unique users
+			isNewUser := false
+			t.activeUsersMu.Lock()
+			if !t.activeUsers[sender.ID] {
+				t.activeUsers[sender.ID] = true
+				isNewUser = true
+				// Update active users counter
+				metrics.UpdateActiveUsers(len(t.activeUsers))
+			}
+			t.activeUsersMu.Unlock()
+
+			// Record user session
+			metrics.RecordUserSession(isNewUser)
 
 			from, err := dataStorage.GetUser(ctx, sender.ID)
 			if err != nil {
 				if !errors.Is(err, storage.ErrUserNotFound) {
 					logger.Printf("failed to get user: %v", err)
+					metrics.RecordTelegramError("get_user")
 					continue
 				}
 
@@ -186,15 +221,20 @@ func (t *Server) ListenAndServe(ctx context.Context) error {
 				defer func() {
 					if r := recover(); r != nil {
 						logger.Printf("recovered from panic: %v", r)
+						metrics.RecordTelegramError("panic")
 					}
 				}()
+
+				start := time.Now()
 
 				t.Handler.Serve(
 					ctx,
 					&telegramResponseWriter{
-						chatID: chatID,
-						sender: bot,
-						log:    logger,
+						chatID:      chatID,
+						sender:      bot,
+						log:         logger,
+						messageType: messageType,
+						startTime:   start,
 					},
 					&server.Request{
 						ChatID:   chatID,
@@ -210,11 +250,13 @@ func (t *Server) ListenAndServe(ctx context.Context) error {
 	}
 }
 
-// telegramResponseWriter адаптирует отправку сообщений к интерфейсу ResponseWriter.
+// telegramResponseWriter adapts message sending to the ResponseWriter interface
 type telegramResponseWriter struct {
-	chatID int64
-	sender *tgbotapi.BotAPI
-	log    *log.Logger
+	chatID      int64
+	sender      *tgbotapi.BotAPI
+	log         *log.Logger
+	messageType string
+	startTime   time.Time
 }
 
 func (w *telegramResponseWriter) WriteResponse(m chat.Message) error {
@@ -224,13 +266,18 @@ func (w *telegramResponseWriter) WriteResponse(m chat.Message) error {
 
 	if err := SendMessage(w.sender, w.chatID, m); err != nil {
 		w.log.Printf("failed to send message to chatID %d: %v", w.chatID, err)
+		metrics.RecordTelegramError("send_message")
 		return err
 	}
+
+	// Record response time
+	responseTime := time.Since(w.startTime).Seconds()
+	metrics.ObserveTelegramResponseTime(w.messageType, responseTime)
 
 	return nil
 }
 
-// unimplementedDataStorage предоставляет пустую реализацию интерфейса истории.
+// unimplementedDataStorage provides an empty implementation of the history interface
 type unimplementedDataStorage struct{}
 
 func (unimplementedDataStorage) GetChatHistory(

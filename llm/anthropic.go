@@ -7,10 +7,12 @@ import (
 	"net"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/anthropics/anthropic-sdk-go"
 	"github.com/anthropics/anthropic-sdk-go/option"
 	"github.com/muzykantov/health-gpt/chat"
+	"github.com/muzykantov/health-gpt/metrics"
 	"golang.org/x/net/proxy"
 )
 
@@ -25,7 +27,8 @@ type AnthropicOption func(*Anthropic)
 
 // Anthropic implements a client for interacting with Anthropic.
 type Anthropic struct {
-	client *anthropic.Client
+	client anthropic.Client
+
 	// Configuration parameters.
 	model       string  // Model to use.
 	temperature float64 // Generation temperature (0.0-1.0).
@@ -134,11 +137,15 @@ func NewAnthropic(apiKey string, opts ...AnthropicOption) (*Anthropic, error) {
 
 // CompleteChat implements the Completion interface.
 func (c *Anthropic) CompleteChat(ctx context.Context, msgs []chat.Message) (chat.Message, error) {
-	anthropicMessages := make([]anthropic.MessageParam, 0, len(msgs))
+	var (
+		start    = time.Now()
+		provider = "anthropic"
+		status   = "success"
+	)
 
+	anthropicMessages := make([]anthropic.MessageParam, 0, len(msgs))
 	var systemContent string
 
-	// Extract system message if present
 	for _, msg := range msgs {
 		if msg.Sender == chat.RoleSystem {
 			content, ok := msg.Content.(string)
@@ -154,7 +161,6 @@ func (c *Anthropic) CompleteChat(ctx context.Context, msgs []chat.Message) (chat
 		}
 	}
 
-	// Convert other messages to Anthropic format
 	for _, msg := range msgs {
 		// Skip system messages as they are handled separately
 		if msg.Sender == chat.RoleSystem {
@@ -189,27 +195,29 @@ func (c *Anthropic) CompleteChat(ctx context.Context, msgs []chat.Message) (chat
 	}
 
 	params := anthropic.MessageNewParams{
-		Model:     anthropic.F(c.model),
-		MaxTokens: anthropic.F(c.maxTokens),
-		Messages:  anthropic.F(anthropicMessages),
+		Model:     c.model,
+		MaxTokens: c.maxTokens,
+		Messages:  anthropicMessages,
 	}
 
 	if c.temperature > 0 {
-		params.Temperature = anthropic.F(c.temperature)
+		params.Temperature = anthropic.Float(c.temperature)
 	}
 
 	if c.topP > 0 {
-		params.TopP = anthropic.F(c.topP)
+		params.TopP = anthropic.Float(c.topP)
 	}
 
 	if systemContent != "" {
-		params.System = anthropic.F([]anthropic.TextBlockParam{
-			anthropic.NewTextBlock(systemContent),
-		})
+		params.System = []anthropic.TextBlockParam{
+			{Text: systemContent},
+		}
 	}
 
 	response, err := c.client.Messages.New(ctx, params)
 	if err != nil {
+		status = "error"
+		metrics.ObserveRequestDuration(provider, c.model, status, time.Since(start))
 		return chat.EmptyMessage, fmt.Errorf(
 			"%w: anthropic request failed: %w",
 			ErrAnthropicRequestFailed,
@@ -218,13 +226,17 @@ func (c *Anthropic) CompleteChat(ctx context.Context, msgs []chat.Message) (chat
 	}
 
 	if len(response.Content) == 0 {
+		status = "empty"
+		metrics.ObserveRequestDuration(provider, c.model, status, time.Since(start))
 		return chat.EmptyMessage, fmt.Errorf(
 			"%w: no content in response",
 			ErrAnthropicRequestFailed,
 		)
 	}
 
-	// Extract text content from response
+	metrics.ObserveRequestDuration(provider, c.model, status, time.Since(start))
+	metrics.AddTokens(provider, c.model, int(response.Usage.InputTokens), int(response.Usage.OutputTokens))
+
 	var textContent strings.Builder
 	for _, block := range response.Content {
 		if block.Text != "" {

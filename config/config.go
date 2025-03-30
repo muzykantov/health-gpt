@@ -13,6 +13,7 @@ type Bot struct {
 	Telegram `yaml:"telegram"`
 	Storage  `yaml:"storage"`
 	LLM      `yaml:"llm"`
+	Metrics  `yaml:"metrics"`
 }
 
 // Read parses configuration from reader in YAML format.
