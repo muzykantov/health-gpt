@@ -273,7 +273,7 @@ func (v *Validator) validateResponse(ctx context.Context, originalMsgs []chat.Me
 
 	var result ValidationResult
 	if err := json.Unmarshal([]byte(content), &result); err != nil {
-		v.logger.Printf("[validator] JSON parsing error: %v", err)
+		v.logger.Printf("[validator] JSON parsing error: %v, response: %s", err, content)
 		// If JSON parsing fails, consider it an invalid response
 		return &ValidationResult{
 			CanSendToUser:    false,
