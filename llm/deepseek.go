@@ -296,8 +296,12 @@ func (c *DeepSeek) CompleteChat(ctx context.Context, msgs []chat.Message) (chat.
 	metrics.ObserveRequestDuration(provider, c.model, status, time.Since(start))
 	metrics.AddTokens(provider, c.model, response.Usage.PromptTokens, response.Usage.CompletionTokens)
 
+	content := response.Choices[0].Message.Content
+	content = strings.ReplaceAll(content, "`", "")
+	content = strings.ReplaceAll(content, "json", "")
+
 	return chat.Message{
 		Sender:  chat.RoleAssistant,
-		Content: response.Choices[0].Message.Content,
+		Content: content,
 	}, nil
 }
