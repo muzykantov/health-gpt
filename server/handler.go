@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 
+	"github.com/hashicorp/golang-lru/v2/expirable"
 	"github.com/muzykantov/health-gpt/chat"
 )
 
@@ -39,6 +40,7 @@ type Request struct {
 
 	Completer ChatCompleter
 	Storage   DataStorage
+	Cache     *expirable.LRU[string, any]
 
 	Log *log.Logger
 }

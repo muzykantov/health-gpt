@@ -3,6 +3,8 @@ package handler
 import (
 	"context"
 	_ "embed"
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/muzykantov/health-gpt/chat"
@@ -17,16 +19,14 @@ const myGeneticsChatPrompt = "chat"
 // myGeneticsChat создает обработчик для чата с ИИ по вопросам генетических анализов.
 // Обрабатывает текстовые сообщения пользователя и предоставляет ответы на основе
 // всех доступных результатов анализов. Требует авторизации пользователя.
-func myGeneticsChat() server.Handler {
+func myGeneticsChat(data SelectItemData) server.Handler {
 	return server.HandlerFunc(
 		func(ctx context.Context, w server.ResponseWriter, r *server.Request) {
-			msgText, ok := r.Incoming.Content.(string)
-			if !ok {
-				w.WriteResponse(chat.MsgA("⛔ Пожалуйста, отправьте текстовое сообщение."))
-				r.Log.Printf("invalid message content type (chatID: %d): expected string, got %T",
-					r.ChatID, r.Incoming.Content)
-				return
-			}
+			var (
+				codelabCode string
+				msgText     string
+				sendCode    bool
+			)
 
 			access := mygenetics.AccessToken(r.From.Tokens)
 			if access == "" {
@@ -35,6 +35,111 @@ func myGeneticsChat() server.Handler {
 				return
 			}
 
+			switch {
+			case data == "":
+				var ok bool
+
+				msgText, ok = r.Incoming.Content.(string)
+				if !ok {
+					w.WriteResponse(chat.MsgA("⛔ Пожалуйста, отправьте текстовое сообщение."))
+					r.Log.Printf("invalid message content type (chatID: %d): expected string, got %T",
+						r.ChatID, r.Incoming.Content)
+					return
+				}
+
+				codelabs, err := mygenetics.DefaultClient.FetchCodelabs(ctx, access)
+				if err != nil {
+					w.WriteResponse(chat.MsgA("⚠️ Не удалось загрузить анализы. " +
+						"Пожалуйста, попробуйте позже или обратитесь в поддержку."))
+					r.Log.Printf("failed to fetch codelabs (chatID: %d): %v", r.ChatID, err)
+					return
+				}
+
+				if len(codelabs) == 0 {
+					w.WriteResponse(chat.MsgA("⚠️ У вас пока нет доступных анализов. " +
+						"Пожалуйста, загрузите анализы, чтобы начать общение."))
+					return
+				}
+
+				if len(codelabs) > 1 {
+					msgContent := content.Select{
+						Header: "🧬 У вас несколько анализов. Пожалуйста, выберите один для ответа:",
+					}
+					for _, codelab := range codelabs {
+						msgContent.Items = append(msgContent.Items, content.SelectItem{
+							Caption: fmt.Sprintf("%s (%s)", codelab.Name, codelab.Code),
+							Data: fmt.Sprintf(
+								"%s%s:%s",
+								PrefixAIChat,
+								codelab.Code,
+								r.Incoming.ID,
+							),
+						})
+					}
+
+					w.WriteResponse(chat.MsgA(msgContent))
+					r.Cache.Add(PrefixAIChat+r.Incoming.ID, msgText)
+					return
+				}
+
+				codelabCode = codelabs[0].Code
+				sendCode = false
+
+			case strings.HasPrefix(data, PrefixAIChat):
+				parts := strings.SplitN(strings.TrimPrefix(data, PrefixAIChat), ":", 2)
+				if len(parts) != 2 {
+					w.WriteResponse(chat.MsgA("⛔ Неверный формат анализа. Пожалуйста, выберите ответ из списка."))
+					r.Log.Printf("invalid message parts (chatID: %d): %v",
+						r.ChatID, parts)
+					return
+				}
+
+				msg, ok := r.Cache.Get(PrefixAIChat + parts[1])
+				if !ok {
+					w.WriteResponse(chat.MsgA("⛔ Сообщение устарело."))
+					r.Log.Printf("invalid message cache id (chatID: %d): %s",
+						r.ChatID, parts[1])
+					return
+				}
+
+				codelabCode = parts[0]
+				msgText = msg.(string)
+				sendCode = true
+
+			default:
+				w.WriteResponse(chat.MsgA("⛔ Неизвестная команда. " +
+					"Пожалуйста, выберите действие из предложенного списка."))
+			}
+
+			featureSet, err := mygenetics.DefaultClient.FetchFeatures(ctx, access, codelabCode)
+			if err != nil {
+				w.WriteResponse(chat.MsgAf("⚠️ Не удалось загрузить результаты анализа %s: %v",
+					codelabCode, err))
+				r.Log.Printf("failed to fetch features for codelab %s (chatID: %d): %v",
+					codelabCode, r.ChatID, err)
+				return
+			}
+
+			/*
+				var featureSet genetics.FeatureSet
+				for _, codelab := range codelabs {
+					features, err := mygenetics.DefaultClient.FetchFeatures(ctx, access, codelab.Code)
+					if err != nil {
+						w.WriteResponse(chat.MsgAf("⚠️ Не удалось загрузить результаты анализа %s: %v",
+							codelab.Code, err))
+						r.Log.Printf("failed to fetch features for codelab %s (chatID: %d): %v",
+							codelab.Code, r.ChatID, err)
+						continue
+					}
+
+					featureSet = featureSet.MergeWith(features)
+				}
+			*/
+
+			// -----------------------------------------------------------------
+			// Формирование контекста AI:
+			// -----------------------------------------------------------------
+
 			history, err := r.Storage.GetChatHistory(ctx, r.ChatID, 100)
 			if err != nil {
 				w.WriteResponse(chat.MsgAf("⚠️ Ошибка получения истории чата: %v", err))
@@ -42,55 +147,17 @@ func myGeneticsChat() server.Handler {
 				return
 			}
 
-			// Фильтруем историю только для отправки в AI
 			var filteredHistory []chat.Message
 			for _, msg := range history {
 				if text, ok := msg.Content.(string); ok {
+					if text == DefaultFirstMessage {
+						continue
+					}
+
 					msg.Content = text
 					filteredHistory = append(filteredHistory, msg)
 				}
 			}
-
-			// w.WriteResponse(chat.MsgA("🔍 Загружаю ваши анализы..."))
-
-			codelabs, err := mygenetics.DefaultClient.FetchCodelabs(ctx, access)
-			if err != nil {
-				w.WriteResponse(chat.MsgA("⚠️ Не удалось загрузить анализы. " +
-					"Пожалуйста, попробуйте позже или обратитесь в поддержку."))
-				r.Log.Printf("failed to fetch codelabs (chatID: %d): %v", r.ChatID, err)
-				return
-			}
-
-			if len(codelabs) == 0 {
-				w.WriteResponse(chat.MsgA("⚠️ У вас пока нет доступных анализов. " +
-					"Пожалуйста, загрузите анализы, чтобы начать общение."))
-				return
-			}
-
-			featureSet, err := mygenetics.DefaultClient.FetchFeatures(ctx, access, codelabs[0].Code)
-			if err != nil {
-				w.WriteResponse(chat.MsgAf("⚠️ Не удалось загрузить результаты анализа %s: %v",
-					codelabs[0].Code, err))
-				r.Log.Printf("failed to fetch features for codelab %s (chatID: %d): %v",
-					codelabs[0].Code, r.ChatID, err)
-			}
-			// var featureSet genetics.FeatureSet
-			// for _, codelab := range codelabs {
-			// 	features, err := mygenetics.DefaultClient.FetchFeatures(ctx, access, codelab.Code)
-			// 	if err != nil {
-			// 		w.WriteResponse(chat.MsgAf("⚠️ Не удалось загрузить результаты анализа %s: %v",
-			// 			codelab.Code, err))
-			// 		r.Log.Printf("failed to fetch features for codelab %s (chatID: %d): %v",
-			// 			codelab.Code, r.ChatID, err)
-			// 		continue
-			// 	}
-
-			// 	featureSet = featureSet.MergeWith(features)
-			// }
-
-			// -----------------------------------------------------------------
-			// Формирование контекста AI:
-			// -----------------------------------------------------------------
 
 			prompt := prompts.Get(myGeneticsChatPrompt, r.Completer.ModelName())
 			if prompt == prompts.Default {
@@ -107,7 +174,8 @@ func myGeneticsChat() server.Handler {
 			msgs = append(msgs, chat.MsgU(contextMsg)) // Данные как сообщение пользователя
 
 			// Подтверждающий ответ ассистента после контекста
-			confirmationMsg := "Я изучил предоставленные генетические данные. Теперь я готов ответить на ваши вопросы, опираясь на эту информацию."
+			confirmationMsg := "Я изучил предоставленные генетические данные. " +
+				"Теперь я готов ответить на ваши вопросы, опираясь на эту информацию."
 			msgs = append(msgs, chat.MsgA(confirmationMsg))
 
 			// История чата
@@ -156,7 +224,15 @@ func myGeneticsChat() server.Handler {
 				return
 			}
 
-			w.WriteResponse(chat.MsgA(response.Content))
+			if !sendCode {
+				w.WriteResponse(chat.MsgA(response.Content))
+			} else {
+				w.WriteResponse(chat.MsgAf(
+					"🔎 Проанализировал <b>%s</b> и вот, что получилось:\n\n%s",
+					codelabCode,
+					response.Content,
+				))
+			}
 		},
 	)
 }

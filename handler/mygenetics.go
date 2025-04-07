@@ -3,10 +3,22 @@ package handler
 import (
 	"context"
 	_ "embed"
+	"strings"
 
 	"github.com/muzykantov/health-gpt/chat"
 	"github.com/muzykantov/health-gpt/chat/content"
 	"github.com/muzykantov/health-gpt/server"
+)
+
+type (
+	SelectItemPrefix = string
+	SelectItemData   = string
+)
+
+const (
+	PrefixCodelab SelectItemPrefix = "codelab:"
+	PrefixAI      SelectItemPrefix = "ai:"
+	PrefixAIChat  SelectItemPrefix = "ai_chat:"
 )
 
 // myGenetics создает основной обработчик для работы с генетическими анализами.
@@ -33,10 +45,19 @@ func myGenetics() server.Handler {
 
 			switch msgContent := r.Incoming.Content.(type) {
 			case string:
-				myGeneticsChat().Serve(ctx, w, r)
+				myGeneticsChat("").Serve(ctx, w, r)
 
 			case content.SelectItem:
-				myGeneticsCodelab(msgContent.Data).Serve(ctx, w, r)
+				switch {
+				case strings.HasPrefix(msgContent.Data, PrefixAI):
+					myGeneticsCodelab(msgContent.Data).Serve(ctx, w, r)
+
+				case strings.HasPrefix(msgContent.Data, PrefixCodelab):
+					myGeneticsCodelab(msgContent.Data).Serve(ctx, w, r)
+
+				case strings.HasPrefix(msgContent.Data, PrefixAIChat):
+					myGeneticsChat(msgContent.Data).Serve(ctx, w, r)
+				}
 
 			case content.Command:
 				commands(Command(msgContent.Name)).Serve(ctx, w, r)

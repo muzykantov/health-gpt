@@ -16,7 +16,7 @@ const myGeneticsCodelabPrompt = "codelab"
 // myGeneticsCodelab создает обработчик для отображения результатов конкретного анализа.
 // Если код начинается с "ai:", предоставляет интерпретацию через ИИ, в противном случае
 // показывает детальные результаты. Требует авторизации пользователя.
-func myGeneticsCodelab(code string) server.Handler {
+func myGeneticsCodelab(data SelectItemData) server.Handler {
 	return server.HandlerFunc(
 		func(ctx context.Context, w server.ResponseWriter, r *server.Request) {
 			access := mygenetics.AccessToken(r.From.Tokens)
@@ -27,15 +27,22 @@ func myGeneticsCodelab(code string) server.Handler {
 			}
 
 			var useAI bool
-			if strings.HasPrefix(code, "ai:") {
-				code = strings.TrimPrefix(code, "ai:")
+			switch {
+			case strings.HasPrefix(data, PrefixAI):
+				data = strings.TrimPrefix(data, PrefixAI)
 				useAI = true
+			case strings.HasPrefix(data, PrefixCodelab):
+				data = strings.TrimPrefix(data, PrefixCodelab)
+				useAI = false
+			default:
+				w.WriteResponse(chat.MsgAf("⛔ Неизвестный префикс: %s.", data))
+				return
 			}
 
 			w.WriteResponse(chat.MsgAf("🔍 Загружаю результаты анализа %s. "+
-				"Это займёт несколько секунд...", code))
+				"Это займёт несколько секунд...", data))
 
-			features, err := mygenetics.DefaultClient.FetchFeatures(ctx, access, code)
+			features, err := mygenetics.DefaultClient.FetchFeatures(ctx, access, data)
 			if err != nil {
 				w.WriteResponse(chat.MsgA("⚠️ Не удалось получить информацию об анализе. " +
 					"Пожалуйста, попробуйте позже или обратитесь в поддержку."))

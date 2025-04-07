@@ -9,6 +9,7 @@ import (
 	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	"github.com/hashicorp/golang-lru/v2/expirable"
 	"github.com/muzykantov/health-gpt/chat"
 	"github.com/muzykantov/health-gpt/chat/content"
 	"github.com/muzykantov/health-gpt/chat/storage"
@@ -60,6 +61,8 @@ func (t *Server) ListenAndServe(ctx context.Context) error {
 			},
 		}
 	}
+
+	cache := expirable.NewLRU[string, any](0, nil, time.Hour)
 
 	dataStorage := t.Storage
 	if dataStorage == nil {
@@ -126,22 +129,16 @@ func (t *Server) ListenAndServe(ctx context.Context) error {
 				if update.Message.IsCommand() {
 					messageType = "command"
 					metrics.RecordTelegramMessage("command")
-					incoming = chat.Message{
-						Sender: chat.RoleUser,
-						Content: content.Command{
+					incoming = chat.MsgU(
+						content.Command{
 							Name: update.Message.Command(),
 							Args: update.Message.CommandArguments(),
 						},
-						CreatedAt: chat.Now().UTC(),
-					}
+					)
 				} else {
 					messageType = "text"
 					metrics.RecordTelegramMessage("text")
-					incoming = chat.Message{
-						Sender:    chat.RoleUser,
-						Content:   update.Message.Text,
-						CreatedAt: chat.Now().UTC(),
-					}
+					incoming = chat.MsgU(update.Message.Text)
 				}
 
 			case update.CallbackQuery != nil &&
@@ -172,14 +169,10 @@ func (t *Server) ListenAndServe(ctx context.Context) error {
 					}
 				}
 
-				incoming = chat.Message{
-					Sender: chat.RoleUser,
-					Content: content.SelectItem{
-						Caption: caption,
-						Data:    update.CallbackQuery.Data,
-					},
-					CreatedAt: chat.Now().UTC(),
-				}
+				incoming = chat.MsgU(content.SelectItem{
+					Caption: caption,
+					Data:    update.CallbackQuery.Data,
+				})
 
 			default:
 				logger.Printf("unsupported update: %v", update)
@@ -243,6 +236,7 @@ func (t *Server) ListenAndServe(ctx context.Context) error {
 
 						Completer: chatCompletion,
 						Storage:   dataStorage,
+						Cache:     cache,
 						Log:       logger,
 					})
 			}()

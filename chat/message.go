@@ -3,6 +3,8 @@ package chat
 import (
 	"fmt"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 // Now можно переопределить в тестах.
@@ -10,6 +12,7 @@ var Now = time.Now
 
 // Message объединяет роль и содержимое сообщения.
 type Message struct {
+	ID        string
 	Sender    Role
 	Content   any
 	CreatedAt time.Time
@@ -35,6 +38,7 @@ func (m Message) String() string {
 // NewMessage создает новое сообщение.
 func NewMessage(role Role, content any) Message {
 	return Message{
+		ID:        uuid.NewString(),
 		Sender:    role,
 		Content:   content,
 		CreatedAt: Now().UTC(),

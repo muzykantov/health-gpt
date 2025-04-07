@@ -45,7 +45,7 @@ func myGeneticsCodelabs(cmd Command) server.Handler {
 				for _, codelab := range codelabs {
 					msgContent.Items = append(msgContent.Items, content.SelectItem{
 						Caption: fmt.Sprintf("%s (%s)", codelab.Name, codelab.Code),
-						Data:    codelab.Code,
+						Data:    PrefixCodelab + codelab.Code,
 					})
 				}
 
@@ -60,7 +60,7 @@ func myGeneticsCodelabs(cmd Command) server.Handler {
 				for _, codelab := range codelabs {
 					msgContent.Items = append(msgContent.Items, content.SelectItem{
 						Caption: fmt.Sprintf("%s (%s)", codelab.Name, codelab.Code),
-						Data:    "ai:" + codelab.Code,
+						Data:    PrefixAI + codelab.Code,
 					})
 				}
 

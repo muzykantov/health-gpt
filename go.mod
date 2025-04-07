@@ -5,6 +5,8 @@ go 1.24.1
 require (
 	github.com/anthropics/anthropic-sdk-go v0.2.0-beta.3
 	github.com/go-telegram-bot-api/telegram-bot-api/v5 v5.5.1
+	github.com/google/uuid v1.6.0
+	github.com/hashicorp/golang-lru/v2 v2.0.7
 	github.com/openai/openai-go v0.1.0-beta.3
 	github.com/prometheus/client_golang v1.21.1
 	github.com/stretchr/testify v1.10.0
