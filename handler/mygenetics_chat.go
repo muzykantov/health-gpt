@@ -7,13 +7,12 @@ import (
 
 	"github.com/muzykantov/health-gpt/chat"
 	"github.com/muzykantov/health-gpt/chat/content"
-	"github.com/muzykantov/health-gpt/genetics"
+	"github.com/muzykantov/health-gpt/handler/prompts"
 	"github.com/muzykantov/health-gpt/mygenetics"
 	"github.com/muzykantov/health-gpt/server"
 )
 
-//go:embed prompts/chat.txt
-var myGeneticsChatPrompt string
+const myGeneticsChatPrompt = "chat"
 
 // myGeneticsChat создает обработчик для чата с ИИ по вопросам генетических анализов.
 // Обрабатывает текстовые сообщения пользователя и предоставляет ответы на основе
@@ -68,31 +67,44 @@ func myGeneticsChat() server.Handler {
 				return
 			}
 
-			var featureSet genetics.FeatureSet
-			for _, codelab := range codelabs {
-				features, err := mygenetics.DefaultClient.FetchFeatures(ctx, access, codelab.Code)
-				if err != nil {
-					w.WriteResponse(chat.MsgAf("⚠️ Не удалось загрузить результаты анализа %s: %v",
-						codelab.Code, err))
-					r.Log.Printf("failed to fetch features for codelab %s (chatID: %d): %v",
-						codelab.Code, r.ChatID, err)
-					continue
-				}
-
-				featureSet = featureSet.MergeWith(features)
+			featureSet, err := mygenetics.DefaultClient.FetchFeatures(ctx, access, codelabs[0].Code)
+			if err != nil {
+				w.WriteResponse(chat.MsgAf("⚠️ Не удалось загрузить результаты анализа %s: %v",
+					codelabs[0].Code, err))
+				r.Log.Printf("failed to fetch features for codelab %s (chatID: %d): %v",
+					codelabs[0].Code, r.ChatID, err)
 			}
+			// var featureSet genetics.FeatureSet
+			// for _, codelab := range codelabs {
+			// 	features, err := mygenetics.DefaultClient.FetchFeatures(ctx, access, codelab.Code)
+			// 	if err != nil {
+			// 		w.WriteResponse(chat.MsgAf("⚠️ Не удалось загрузить результаты анализа %s: %v",
+			// 			codelab.Code, err))
+			// 		r.Log.Printf("failed to fetch features for codelab %s (chatID: %d): %v",
+			// 			codelab.Code, r.ChatID, err)
+			// 		continue
+			// 	}
+
+			// 	featureSet = featureSet.MergeWith(features)
+			// }
 
 			// -----------------------------------------------------------------
 			// Формирование контекста AI:
 			// -----------------------------------------------------------------
+
+			prompt := prompts.Get(myGeneticsChatPrompt, r.Completer.ModelName())
+			if prompt == prompts.Default {
+				w.WriteResponse(chat.MsgA("⛔ Промпт не найден."))
+				return
+			}
 
 			contextMsg := "Следующие данные генетического анализа должны использоваться для ответа на мои вопросы:\n\n" +
 				featureSet.BuildLLMContext() +
 				"\n\nТеперь я буду задавать вопросы, опираясь на эти данные."
 
 			msgs := make([]chat.Message, 0, 3+len(filteredHistory))
-			msgs = append(msgs, chat.MsgS(myGeneticsChatPrompt)) // Системный промпт
-			msgs = append(msgs, chat.MsgU(contextMsg))           // Данные как сообщение пользователя
+			msgs = append(msgs, chat.MsgS(prompt))     // Системный промпт
+			msgs = append(msgs, chat.MsgU(contextMsg)) // Данные как сообщение пользователя
 
 			// Подтверждающий ответ ассистента после контекста
 			confirmationMsg := "Я изучил предоставленные генетические данные. Теперь я готов ответить на ваши вопросы, опираясь на эту информацию."

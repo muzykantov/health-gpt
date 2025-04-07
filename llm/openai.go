@@ -135,6 +135,11 @@ func NewOpenAI(apiKey string, opts ...OpenAIOption) (*OpenAI, error) {
 	return c, nil
 }
 
+// ModelName returns LLM's model name.
+func (c *OpenAI) ModelName() string {
+	return fmt.Sprintf("openai_%s", c.model)
+}
+
 // CompleteChat implements the Completion interface.
 func (c *OpenAI) CompleteChat(ctx context.Context, msgs []chat.Message) (chat.Message, error) {
 	var (

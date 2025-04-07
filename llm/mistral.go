@@ -166,6 +166,11 @@ type MistralResponse struct {
 	} `json:"usage"`
 }
 
+// ModelName returns LLM's model name.
+func (c *Mistral) ModelName() string {
+	return fmt.Sprintf("mistral_%s", c.model)
+}
+
 // CompleteChat implements the Completion interface.
 func (c *Mistral) CompleteChat(ctx context.Context, msgs []chat.Message) (chat.Message, error) {
 	var (

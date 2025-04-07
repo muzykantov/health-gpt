@@ -163,6 +163,11 @@ type DeepSeekResponse struct {
 	} `json:"usage"`
 }
 
+// ModelName returns LLM's model name.
+func (c *DeepSeek) ModelName() string {
+	return fmt.Sprintf("deepseek_%s", c.model)
+}
+
 // CompleteChat implements the Completion interface.
 func (c *DeepSeek) CompleteChat(ctx context.Context, msgs []chat.Message) (chat.Message, error) {
 	var (

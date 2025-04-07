@@ -135,6 +135,11 @@ func NewAnthropic(apiKey string, opts ...AnthropicOption) (*Anthropic, error) {
 	return c, nil
 }
 
+// ModelName returns LLM's model name.
+func (c *Anthropic) ModelName() string {
+	return fmt.Sprintf("anthropic_%s", c.model)
+}
+
 // CompleteChat implements the Completion interface.
 func (c *Anthropic) CompleteChat(ctx context.Context, msgs []chat.Message) (chat.Message, error) {
 	var (

@@ -7,12 +7,12 @@ import (
 	"time"
 
 	"github.com/muzykantov/health-gpt/chat"
+	"github.com/muzykantov/health-gpt/handler/prompts"
 	"github.com/muzykantov/health-gpt/mygenetics"
 	"github.com/muzykantov/health-gpt/server"
 )
 
-//go:embed prompts/auth.txt
-var AuthPrompt string
+const authPrompt = "auth"
 
 func auth(next server.Handler) server.Handler {
 	return server.HandlerFunc(
@@ -54,8 +54,14 @@ func auth(next server.Handler) server.Handler {
 
 			// Пользователь ноывй? Добавляем инстукции для ИИ получить email и пароль.
 			if len(msgs) == 0 {
+				prompt := prompts.Get(authPrompt, r.Completer.ModelName())
+				if prompt == prompts.Default {
+					w.WriteResponse(chat.MsgA("⛔ Промпт не найден."))
+					return
+				}
+
 				msgs = []chat.Message{
-					chat.MsgS(AuthPrompt),
+					chat.MsgS(prompt),
 				}
 			}
 

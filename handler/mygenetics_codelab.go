@@ -6,9 +6,12 @@ import (
 	"time"
 
 	"github.com/muzykantov/health-gpt/chat"
+	"github.com/muzykantov/health-gpt/handler/prompts"
 	"github.com/muzykantov/health-gpt/mygenetics"
 	"github.com/muzykantov/health-gpt/server"
 )
+
+const myGeneticsCodelabPrompt = "codelab"
 
 // myGeneticsCodelab создает обработчик для отображения результатов конкретного анализа.
 // Если код начинается с "ai:", предоставляет интерпретацию через ИИ, в противном случае
@@ -57,8 +60,14 @@ func myGeneticsCodelab(code string) server.Handler {
 				return
 			}
 
+			prompt := prompts.Get(myGeneticsCodelabPrompt, r.Completer.ModelName())
+			if prompt == prompts.Default {
+				w.WriteResponse(chat.MsgA("⛔ Промпт не найден."))
+				return
+			}
+
 			msgs := make([]chat.Message, 0, 2)
-			msgs = append(msgs, chat.MsgS(MyGeneticsCodelabsPrompt))
+			msgs = append(msgs, chat.MsgS(prompt))
 			msgs = append(msgs, chat.MsgU(features.BuildLLMContext()))
 
 			w.WriteResponse(chat.MsgAf("📑 Загружено %d параметров анализа. "+

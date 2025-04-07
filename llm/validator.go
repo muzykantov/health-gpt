@@ -57,6 +57,7 @@ type ValidationResult struct {
 
 // ChatCompleter generates responses using a language model.
 type ChatCompleter interface {
+	ModelName() string
 	CompleteChat(ctx context.Context, msgs []chat.Message) (chat.Message, error)
 }
 
@@ -109,6 +110,11 @@ func NewValidator(
 		validatorProvider: validatorProvider,
 		validatorName:     validatorName,
 	}
+}
+
+// ModelName returns name of the original model.
+func (v *Validator) ModelName() string {
+	return v.model.ModelName()
 }
 
 // CompleteChat requests a response from LLM and validates the result.

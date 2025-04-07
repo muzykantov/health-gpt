@@ -9,6 +9,7 @@ import (
 
 // ChatCompleter генерирует ответы с помощью языковой модели.
 type ChatCompleter interface {
+	ModelName() string
 	CompleteChat(ctx context.Context, msgs []chat.Message) (chat.Message, error)
 }
 

@@ -9,9 +9,6 @@ import (
 	"github.com/muzykantov/health-gpt/server"
 )
 
-//go:embed prompts/codelabs.txt
-var MyGeneticsCodelabsPrompt string
-
 // myGenetics создает основной обработчик для работы с генетическими анализами.
 // Обрабатывает все типы запросов (команды, выбор анализа, текстовые сообщения)
 // и маршрутизирует их к соответствующим обработчикам. Поддерживает историю чата.
