@@ -26,6 +26,9 @@ var (
 	ErrTelegramInvalidMessageContent  = errors.New("telegram invalid message content")
 )
 
+// Chat history TTL.
+const defaultCacheTTL = time.Hour * 24
+
 // Server manages interaction with Telegram Bot API
 type Server struct {
 	Token               string
@@ -62,7 +65,7 @@ func (t *Server) ListenAndServe(ctx context.Context) error {
 		}
 	}
 
-	cache := expirable.NewLRU[string, any](0, nil, time.Hour)
+	cache := expirable.NewLRU[string, any](0, nil, defaultCacheTTL)
 
 	dataStorage := t.Storage
 	if dataStorage == nil {

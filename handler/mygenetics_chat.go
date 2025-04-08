@@ -14,7 +14,10 @@ import (
 	"github.com/muzykantov/health-gpt/server"
 )
 
-const myGeneticsChatPrompt = "chat"
+const (
+	myGeneticsChatPrompt = "chat"
+	codelabCodeCacheKey  = "chat_codelab_code:%d"
+)
 
 // myGeneticsChat создает обработчик для чата с ИИ по вопросам генетических анализов.
 // Обрабатывает текстовые сообщения пользователя и предоставляет ответы на основе
@@ -23,9 +26,10 @@ func myGeneticsChat(data SelectItemData) server.Handler {
 	return server.HandlerFunc(
 		func(ctx context.Context, w server.ResponseWriter, r *server.Request) {
 			var (
-				codelabCode string
-				msgText     string
-				sendCode    bool
+				codelabCodeCacheKey = fmt.Sprintf(codelabCodeCacheKey, r.ChatID)
+				codelabCode         string
+				msgText             string
+				sendCode            bool
 			)
 
 			access := mygenetics.AccessToken(r.From.Tokens)
@@ -47,6 +51,12 @@ func myGeneticsChat(data SelectItemData) server.Handler {
 					return
 				}
 
+				if cachedCodelab, ok := r.Cache.Get(codelabCodeCacheKey); ok {
+					codelabCode = cachedCodelab.(string)
+					sendCode = true
+					break
+				}
+
 				codelabs, err := mygenetics.DefaultClient.FetchCodelabs(ctx, access)
 				if err != nil {
 					w.WriteResponse(chat.MsgA("⚠️ Не удалось загрузить анализы. " +
@@ -55,15 +65,21 @@ func myGeneticsChat(data SelectItemData) server.Handler {
 					return
 				}
 
-				if len(codelabs) == 0 {
+				switch len(codelabs) {
+				case 0:
 					w.WriteResponse(chat.MsgA("⚠️ У вас пока нет доступных анализов. " +
 						"Пожалуйста, загрузите анализы, чтобы начать общение."))
 					return
-				}
 
-				if len(codelabs) > 1 {
+				case 1:
+					codelabCode = codelabs[0].Code
+					sendCode = false
+
+				default:
 					msgContent := content.Select{
-						Header: "🧬 У вас несколько анализов. Пожалуйста, выберите один для ответа:",
+						Header: "🧬 У вас несколько анализов. Пожалуйста, выберите один. " +
+							"Ассистент будет использовать его, пока выбор не сбросится " +
+							"(например, автоматически или командой /clear).",
 					}
 					for _, codelab := range codelabs {
 						msgContent.Items = append(msgContent.Items, content.SelectItem{
@@ -77,13 +93,11 @@ func myGeneticsChat(data SelectItemData) server.Handler {
 						})
 					}
 
-					w.WriteResponse(chat.MsgA(msgContent))
 					r.Cache.Add(PrefixAIChat+r.Incoming.ID, msgText)
+
+					w.WriteResponse(chat.MsgA(msgContent))
 					return
 				}
-
-				codelabCode = codelabs[0].Code
-				sendCode = false
 
 			case strings.HasPrefix(data, PrefixAIChat):
 				parts := strings.SplitN(strings.TrimPrefix(data, PrefixAIChat), ":", 2)
@@ -106,9 +120,19 @@ func myGeneticsChat(data SelectItemData) server.Handler {
 				msgText = msg.(string)
 				sendCode = true
 
+				r.Cache.Add(codelabCodeCacheKey, codelabCode)
+				if err := r.Storage.SaveChatHistory(ctx, r.ChatID, []chat.Message{
+					chat.MsgU(DefaultFirstMessage),
+				}); err != nil {
+					w.WriteResponse(chat.MsgAf("⚠️ Ошибка сохранения истории чата: %v", err))
+					r.Log.Printf("failed to write chat history (chatID: %d): %v", r.ChatID, err)
+					return
+				}
+
 			default:
 				w.WriteResponse(chat.MsgA("⛔ Неизвестная команда. " +
 					"Пожалуйста, выберите действие из предложенного списка."))
+				return
 			}
 
 			featureSet, err := mygenetics.DefaultClient.FetchFeatures(ctx, access, codelabCode)
@@ -228,7 +252,7 @@ func myGeneticsChat(data SelectItemData) server.Handler {
 				w.WriteResponse(chat.MsgA(response.Content))
 			} else {
 				w.WriteResponse(chat.MsgAf(
-					"🔎 Проанализировал <b>%s</b> и вот, что получилось:\n\n%s",
+					"🧠 Вот, что показывают данные из анализа %s.\n\n%s",
 					codelabCode,
 					response.Content,
 				))

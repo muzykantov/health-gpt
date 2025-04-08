@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/muzykantov/health-gpt/chat"
 	"github.com/muzykantov/health-gpt/server"
@@ -19,6 +20,8 @@ func clear(response bool) server.Handler {
 			}); err != nil {
 				w.WriteResponse(chat.MsgAf("⚠️ Ошибка записи истории чата: %v", err))
 			}
+
+			r.Cache.Remove(fmt.Sprintf(codelabCodeCacheKey, r.ChatID))
 
 			if response {
 				w.WriteResponse(chat.MsgU("🧹 История чата очищена."))
